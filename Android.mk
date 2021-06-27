@@ -41,7 +41,7 @@ LOCAL_SRC_FILES += $(call rwildcard,extern/beatsaber-hook/src/inline-hook,*.c)
 LOCAL_SHARED_LIBRARIES += modloader
 LOCAL_SHARED_LIBRARIES += beatsaber-hook_1_3_5
 LOCAL_LDLIBS += -llog
-LOCAL_CFLAGS += -I'extern/libil2cpp/il2cpp/libil2cpp' -DID='"socket_lib"' -DVERSION='"0.1.0"' -I'./shared' -I'./extern' -isystem'extern/codegen/include' -DQUEST=""
+LOCAL_CFLAGS += -I'extern/libil2cpp/il2cpp/libil2cpp' -DID='"socket_lib"' -DVERSION='"0.1.1"' -I'./shared' -I'./extern' -isystem'extern/codegen/include' -DQUEST=""
 LOCAL_CPPFLAGS += -std=c++2a -lpthread
 LOCAL_C_INCLUDES += ./include ./src ./test/src ./test/include
 include $(BUILD_SHARED_LIBRARY)
