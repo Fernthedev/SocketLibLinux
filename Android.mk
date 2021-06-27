@@ -30,11 +30,11 @@ LOCAL_MODULE := socket_lib
 LOCAL_SRC_FILES += $(call rwildcard,src/,*.cpp)
 LOCAL_SRC_FILES += $(call rwildcard,test/src/,*.cpp)
 LOCAL_SHARED_LIBRARIES += modloader
-LOCAL_CPP_FEATURES += exceptions
 LOCAL_LDLIBS += -llog
-LOCAL_CFLAGS += -I'extern/libil2cpp/il2cpp/libil2cpp' -DID='"socket_lib"' -DVERSION='"0.1.0"' -I'./shared' -I'./extern' -isystem'extern/codegen/include' -DQUEST=""
+LOCAL_CFLAGS += -I'extern/libil2cpp/il2cpp/libil2cpp' -DID='"socket_lib"' -DVERSION='"0.2.0"' -I'./shared' -I'./extern' -isystem'extern/codegen/include' -DQUEST=""
 LOCAL_CPPFLAGS += -std=c++2a -lpthread
 LOCAL_C_INCLUDES += ./include ./src ./test/src ./test/include
+LOCAL_CPP_FEATURES += exceptions
 #LOCAL_SRC_FILES += $(call rwildcard,extern/beatsaber-hook/src/inline-hook,*.cpp)
 #LOCAL_SRC_FILES += $(call rwildcard,extern/beatsaber-hook/src/inline-hook,*.c)
 include $(BUILD_SHARED_LIBRARY)
