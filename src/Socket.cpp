@@ -108,7 +108,7 @@ void Channel::queueWrite(const Message &msg) {
         sendData(msg);
     } else {
         writeQueue.enqueue(msg);
-        coutdebug << "Queued" << std::endl;
+        coutdebug << "Queued write data" << std::endl;
     }
 }
 
@@ -184,7 +184,7 @@ void Channel::writeThreadLoop() {
 
 void Channel::sendData(const Message &message) {
     // Throw exception here?
-    if (!active) {
+    if (!active || !socket.isActive()) {
         coutdebug << "Sending data when socket isn't active, why?" << std::endl;
         return;
     }
