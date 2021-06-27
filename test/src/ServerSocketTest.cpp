@@ -36,6 +36,8 @@ void SocketLib::ServerSocketTest::startTest() {
 
     std::cout << "Listening server fully started up" << std::endl;
 
+    // This is only to keep the test running.
+    // When using as a lib, realistically you won't do this
     while (serverSocket.isActive()) {}
 
     std::cout << "Finished server test, awaiting for server shutdown" << std::endl;
