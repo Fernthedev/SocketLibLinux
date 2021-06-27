@@ -183,6 +183,12 @@ void Channel::writeThreadLoop() {
 }
 
 void Channel::sendData(const Message &message) {
+    // Throw exception here?
+    if (!active) {
+        coutdebug << "Sending data when socket isn't active, why?" << std::endl;
+        return;
+    }
+
     long sent_bytes = send(clientDescriptor, message.data(), message.length(), 0);
 
     // Queue up remaining data
