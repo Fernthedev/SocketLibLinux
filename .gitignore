@@ -2,6 +2,10 @@ builddir
 ndkpath.txt
 .idea/sonarlint
 
+# For CI
+QPM/
+QPM_Temp/
+
 # Prerequisites
 *.d
 
