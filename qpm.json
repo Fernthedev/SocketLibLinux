@@ -5,8 +5,10 @@
     "name": "SocketLib",
     "id": "socket_lib",
     "version": "0.1.0",
-    "url": null,
-    "additionalData": {}
+    "url": "https://github.com/Fernthedev/SocketLibLinux",
+    "additionalData": {
+      "overrideSoName": "libsocket_lib.so"
+    }
   },
   "dependencies": [
     {
