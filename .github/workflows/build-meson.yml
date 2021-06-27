@@ -33,12 +33,12 @@ jobs:
       - name: Upload library file
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ steps.libname.outputs.NAME }}
+          name: libsocket_lib.so
           path: ./build/libsocket_lib.so
           if-no-files-found: error
       - name: Upload executable tests
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ steps.libname.outputs.NAME }}
+          name: SocketLibMain
           path: ./build/SocketLibMain
           if-no-files-found: error
