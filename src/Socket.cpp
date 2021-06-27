@@ -87,15 +87,22 @@ bool Socket::isDestroyed() const {
     return destroyed;
 }
 
-Socket::ReadSendThreads::ReadSendThreads(Socket &socket, int clientDescriptor) : socket(socket),
-                                                                                 clientDescriptor(clientDescriptor),
-                                                                                 active(true),
-                                                                                 writeConsumeToken(writeQueue) {
-    this->writeThread = std::thread(&ReadSendThreads::writeThreadLoop, this);
-    this->readThread = std::thread(&ReadSendThreads::readThreadLoop, this);
+SocketHandler *Socket::getSocketHandler() const {
+    return socketHandler;
 }
 
-void Socket::ReadSendThreads::queueWrite(const Message &msg) {
+Channel::Channel(Socket &socket, int clientDescriptor, std::function<void(int)>  onDisconnect, std::vector<ListenCallback> listenCallbacks):
+            socket(socket),
+            clientDescriptor(clientDescriptor),
+            active(true),
+            writeConsumeToken(writeQueue),
+            onDisconnectEvent(std::move(onDisconnect)),
+            listenCallbacks(std::move(listenCallbacks)) {
+    this->writeThread = std::thread(&Channel::writeThreadLoop, this);
+    this->readThread = std::thread(&Channel::readThreadLoop, this);
+}
+
+void Channel::queueWrite(const Message &msg) {
     if (std::this_thread::get_id() == writeThread.get_id()) {
         // TODO: Immediately send only if queue empty? If not, queue up when there's work on the queue
         sendData(msg);
@@ -105,7 +112,7 @@ void Socket::ReadSendThreads::queueWrite(const Message &msg) {
     }
 }
 
-void Socket::ReadSendThreads::readThreadLoop() {
+void Channel::readThreadLoop() {
     try {
         while (socket.isActive() && active) {
             auto bufferSize = socket.bufferSize;
@@ -118,13 +125,13 @@ void Socket::ReadSendThreads::readThreadLoop() {
                 continue;
 
             if (recv_bytes == 0) {
-                socket.onDisconnectClient(clientDescriptor);
+                onDisconnectEvent(clientDescriptor);
 
                 return;
 
                 // Error
             } else if (recv_bytes < 0) {
-                socket.onDisconnectClient(clientDescriptor);
+                onDisconnectEvent(clientDescriptor);
                 Utils::throwIfError((int) recv_bytes);
                 // Queue up remaining data
             } else {
@@ -135,28 +142,29 @@ void Socket::ReadSendThreads::readThreadLoop() {
 
                 Message message(receivedBuf, recv_bytes);
 
-                for (const auto &listener : socket.listenCallbacks) {
-                    socket.socketHandler->queueWork([=] {
-                        listener(clientDescriptor, message);
+                if (!listenCallbacks.empty())
+                    socket.getSocketHandler()->queueWork([=] {
+                        for (const auto &listener : listenCallbacks) {
+                            // I kinda wanted it to be each event is async but I guess not
+                            listener(*this, message);
+                        }
                     });
-                }
             }
         }
     } catch (std::exception &e) {
         fprintf(stderr, "Closing socket because it has crashed fatally while reading: %s", e.what());
-        socket.onDisconnectClient(clientDescriptor);
+        onDisconnectEvent(clientDescriptor);
     } catch (...) {
         fprintf(stderr, "Closing socket because it has crashed fatally while reading for an unknown reason");
-        socket.onDisconnectClient(clientDescriptor);
+        onDisconnectEvent(clientDescriptor);
     }
 
     coutdebug << "Read loop ending" << std::endl;
 }
 
-void Socket::ReadSendThreads::writeThreadLoop() {
+void Channel::writeThreadLoop() {
     try {
         while (socket.isActive() && active) {
-
             Message message(nullptr, 0);
 
             // TODO: Find a way to forcefully stop waiting for deque
@@ -166,15 +174,15 @@ void Socket::ReadSendThreads::writeThreadLoop() {
         }
     } catch (std::exception &e) {
         fprintf(stderr, "Closing socket because it has crashed fatally while writing: %s", e.what());
-        socket.onDisconnectClient(clientDescriptor);
+        onDisconnectEvent(clientDescriptor);
 
     } catch (...) {
         fprintf(stderr, "Closing socket because it has crashed fatally while writing for an unknown reason");
-        socket.onDisconnectClient(clientDescriptor);
+        onDisconnectEvent(clientDescriptor);
     }
 }
 
-void Socket::ReadSendThreads::sendData(const Message &message) {
+void Channel::sendData(const Message &message) {
     long sent_bytes = send(clientDescriptor, message.data(), message.length(), 0);
 
     // Queue up remaining data
@@ -190,12 +198,12 @@ void Socket::ReadSendThreads::sendData(const Message &message) {
         queueWrite(Message(remainingBytes, length));
         delete[] remainingBytes;
     } else if (sent_bytes < 0) {
-        socket.onDisconnectClient(clientDescriptor);
+        onDisconnectEvent(clientDescriptor);
         Utils::throwIfError((int) sent_bytes);
     }
 }
 
-Socket::ReadSendThreads::~ReadSendThreads() {
+Channel::~Channel() {
     // TODO: Throw exception?
     active = false;
 

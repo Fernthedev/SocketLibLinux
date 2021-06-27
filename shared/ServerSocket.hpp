@@ -34,7 +34,11 @@ namespace SocketLib {
         void getHostName();
         void getHostByName();
 
-        void write(int clientDescriptor,const Message& msg);
+        /// This will write to the clientDescriptor
+        /// Note: This is slower than Channel.queueWrite because it grabs a lock
+        /// \param clientDescriptor
+        /// \param msg
+        void write(int clientDescriptor, const Message& msg);
 
     protected:
         void onConnectedClient(int clientDescriptor) override;
@@ -48,6 +52,6 @@ namespace SocketLib {
         std::thread connectionListenThread;
 
         std::shared_mutex clientDescriptorsMutex;
-        std::unordered_map<int, std::shared_ptr<ReadSendThreads>> clientDescriptors;
+        std::unordered_map<int, std::shared_ptr<Channel>> clientDescriptors;
     };
 }

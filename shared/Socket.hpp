@@ -16,11 +16,13 @@
 
 namespace SocketLib {
 
+    /// Forward declares
     class SocketHandler;
+    class Channel;
 
     // int is client descriptor, true if connect, false disconnected
-    using ConnectCallback = std::function<void(int, bool)>;
-    using ListenCallback = std::function<void(int, const Message&)>;
+    using ConnectCallback = std::function<void(Channel&, bool)>;
+    using ListenCallback = std::function<void(Channel&, const Message&)>;
 
 
     class Socket {
@@ -53,6 +55,10 @@ namespace SocketLib {
         /// Returns true if the destructor has been called at least once
         /// \return
         [[nodiscard]] bool isDestroyed() const;
+
+        /// The socket handler managing this socket
+        /// TODO: Should we even have this or pass it manually where it's needed?
+        [[nodiscard]] SocketHandler* getSocketHandler() const;
     private:
         uint32_t id;
 
@@ -62,15 +68,13 @@ namespace SocketLib {
         std::vector<ConnectCallback> connectCallbacks;
         std::mutex connectMutex;
 
-
-
     protected:
         explicit Socket(SocketHandler* socketHandler, uint32_t id, std::optional<std::string> address, uint32_t port);
 
+        SocketHandler* socketHandler;
+
         bool active = false;
         bool destroyed = false;
-
-        SocketHandler* socketHandler;
 
         struct addrinfo *servInfo;
         const std::optional<std::string> host;
@@ -81,34 +85,40 @@ namespace SocketLib {
         virtual void onDisconnectClient(int clientDescriptor) = 0;
 
 
-        struct ReadSendThreads {
-            ReadSendThreads() = delete;
 
-            explicit ReadSendThreads(Socket& socket, int clientDescriptor);
+    };
 
-            ~ReadSendThreads();
+    struct Channel {
+        Channel() = delete;
 
-            void readThreadLoop();
-            void writeThreadLoop();
+        explicit Channel(Socket& socket, int clientDescriptor, std::function<void(int)> onDisconnect, std::vector<ListenCallback> listenCallbacks);
 
-            void queueWrite(const Message& msg);
+        ~Channel();
 
-            std::thread readThread;
-            std::thread writeThread;
+        void readThreadLoop();
+        void writeThreadLoop();
 
-            const int clientDescriptor;
+        void queueWrite(const Message& msg);
 
-        private:
-            bool active;
-            Socket& socket;
+        std::thread readThread;
+        std::thread writeThread;
 
-            moodycamel::BlockingConcurrentQueue<Message> writeQueue;
+        const int clientDescriptor;
 
-            void sendData(const Message& message);
+    private:
+        const std::function<void(int)> onDisconnectEvent;
+        const std::vector<ListenCallback> listenCallbacks;
+        bool active;
 
-            std::mutex deconstructMutex;
-            moodycamel::ConsumerToken writeConsumeToken;
-        };
+        /// TODO: Should we add a getter for Socket? Should it be const?
+        Socket& socket;
+
+        moodycamel::BlockingConcurrentQueue<Message> writeQueue;
+
+        void sendData(const Message& message);
+
+        std::mutex deconstructMutex;
+        moodycamel::ConsumerToken writeConsumeToken;
     };
 
 }

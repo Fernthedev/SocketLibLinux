@@ -8,11 +8,11 @@
 
 using namespace SocketLib;
 
-void SocketLib::ServerSocketTest::connectEvent(int clientDescriptor, bool connected) const {
-    std::cout << "Connected " << clientDescriptor << " status: " << (connected ? "true" : "false") << std::endl;
+void SocketLib::ServerSocketTest::connectEvent(Channel& channel, bool connected) const {
+    std::cout << "Connected " << channel.clientDescriptor << " status: " << (connected ? "true" : "false") << std::endl;
 
     if (connected) {
-        serverSocket->write(clientDescriptor, Message("hi!\n"));
+        channel.queueWrite(Message("hi!\n"));
     }
 }
 
@@ -26,11 +26,11 @@ void SocketLib::ServerSocketTest::startTest() {
 
     ServerSocket& serverSocket = *this->serverSocket;
 
-    serverSocket.registerConnectCallback([this](int client, bool connected){
+    serverSocket.registerConnectCallback([this](Channel& client, bool connected){
         connectEvent(client, connected);
     });
 
-    serverSocket.registerListenCallback([this](int client, const Message& message){
+    serverSocket.registerListenCallback([this](Channel& client, const Message& message){
         listenOnEvents(client, message);
     });
 
@@ -47,7 +47,7 @@ void SocketLib::ServerSocketTest::startTest() {
     delete this->serverSocket;
 }
 
-void ServerSocketTest::listenOnEvents(int client, const Message &message) {
+void ServerSocketTest::listenOnEvents(Channel& client, const Message &message) {
     auto msgStr = message.toString();
     std::cout << "Received: " << msgStr << std::endl;
 

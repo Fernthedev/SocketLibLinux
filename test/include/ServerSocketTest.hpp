@@ -9,8 +9,8 @@ namespace SocketLib {
         ~ServerSocketTest() = default;
 
         void startTest();
-        void connectEvent(int clientDescriptor, bool connected) const;
-        void listenOnEvents(int clientDescriptor, const Message& message);
+        void connectEvent(SocketLib::Channel& channel, bool connected) const;
+        void listenOnEvents(SocketLib::Channel& clientDescriptor, const Message& message);
 
         ServerSocket* serverSocket;
     };

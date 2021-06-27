@@ -67,13 +67,19 @@ ServerSocket::~ServerSocket() {
 
 void ServerSocket::onConnectedClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
-    auto groupThread = std::make_shared<ReadSendThreads>((Socket&) *this, clientDescriptor);
+    /// Is there a better way instead of lambda?
+    auto channel = std::make_shared<Channel>(*this, clientDescriptor, [this](int c) { onDisconnectClient(c); },
+                                             getListenCallbacks());
 
-    clientDescriptors.emplace(clientDescriptor, groupThread);
+    clientDescriptors.emplace(clientDescriptor, channel);
 
-    for (const auto& callback : getConnectCallbacks()) {
-        socketHandler->queueWork([=]{
-            callback(clientDescriptor, true);
+    if (!getConnectCallbacks().empty()) {
+        socketHandler->queueWork([=] {
+            for (const auto &callback : getConnectCallbacks()) {
+                // TODO: Catch exceptions?
+                // TODO: Should we even use reference types here?
+                callback(*channel, true);
+            }
         });
     }
 }
@@ -86,16 +92,18 @@ void ServerSocket::onDisconnectClient(int clientDescriptor) {
     if (it == clientDescriptors.end())
         throw std::runtime_error(std::string("Client descriptor %d does not exist", clientDescriptor));
 
-    socketHandler->queueWork([=]{
+    Channel* channel = it->second.get();
+    // This has to be done to ensure we don't call the destructor when a Channel calls this
+    socketHandler->queueWork([=] {
         closeClient(clientDescriptor);
+        if (!getConnectCallbacks().empty()) {
+            for (const auto &callback : getConnectCallbacks()) {
+                // TODO: Catch exceptions?
+                // TODO: Should we even use reference types here?
+                callback(*channel, false);
+            }
+        }
     });
-
-
-    for (const auto& callback : getConnectCallbacks()) {
-        socketHandler->queueWork([=]{
-            callback(clientDescriptor, false);
-        });
-    }
 }
 
 void ServerSocket::write(int clientDescriptor, const Message& message) {
@@ -123,8 +131,8 @@ void ServerSocket::closeClient(int clientDescriptor) {
 
         // TODO: Somehow validate that there are no memory leaks here?
     } else {
-        Utils::throwIfError(shutdown(clientDescriptor, SHUT_RDWR));
-        Utils::throwIfError(close(clientDescriptor));
+        shutdown(clientDescriptor, SHUT_RDWR);
+        close(clientDescriptor);
     }
 
     coutdebug << "Fully finished clearing client data from server memory." << std::endl;
