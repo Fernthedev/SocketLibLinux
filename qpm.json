@@ -12,13 +12,9 @@
   },
   "dependencies": [
     {
-      "id": "beatsaber-hook",
+      "id": "modloader",
       "versionRange": "*",
-      "additionalData": {
-        "extraFiles": [
-          "src/inline-hook"
-        ]
-      }
+      "additionalData": {}
     }
   ],
   "additionalData": {}
