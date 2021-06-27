@@ -1,0 +1,38 @@
+name: Linux Meson Build
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  build:
+    env:
+      module_id: socket_lib
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout
+        with:
+          submodules: true
+          lfs: true
+
+      - uses: actions/setup-python@v1
+      - uses: BSFishy/meson-build@v1.0.1
+        with:
+          action: build
+
+      - name: Upload library file
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.libname.outputs.NAME }}
+          path: ./build/libsocket_lib.so
+          if-no-files-found: error
+      - name: Upload executable tests
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.libname.outputs.NAME }}
+          path: ./build/SocketLibMain
+          if-no-files-found: error
