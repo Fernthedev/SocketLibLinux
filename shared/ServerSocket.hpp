@@ -52,6 +52,6 @@ namespace SocketLib {
         std::thread connectionListenThread;
 
         std::shared_mutex clientDescriptorsMutex;
-        std::unordered_map<int, std::shared_ptr<Channel>> clientDescriptors;
+        std::unordered_map<int, std::unique_ptr<Channel>> clientDescriptors;
     };
 }

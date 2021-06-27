@@ -68,17 +68,19 @@ ServerSocket::~ServerSocket() {
 void ServerSocket::onConnectedClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
     /// Is there a better way instead of lambda?
-    auto channel = std::make_shared<Channel>(*this, clientDescriptor, [this](int c) { onDisconnectClient(c); },
+    std::unique_ptr<Channel> channel = std::make_unique<Channel>(*this, clientDescriptor, [this](int c) { onDisconnectClient(c); },
                                              getListenCallbacks());
 
-    clientDescriptors.emplace(clientDescriptor, channel);
+    auto* channelPtr = channel.get();
+
+    clientDescriptors.emplace(clientDescriptor, std::move(channel));
 
     if (!getConnectCallbacks().empty()) {
         socketHandler->queueWork([=] {
             for (const auto &callback : getConnectCallbacks()) {
                 // TODO: Catch exceptions?
                 // TODO: Should we even use reference types here?
-                callback(*channel, true);
+                callback(*channelPtr, true);
             }
         });
     }
@@ -113,7 +115,7 @@ void ServerSocket::write(int clientDescriptor, const Message& message) {
     if (it == clientDescriptors.end())
         throw std::runtime_error(std::string("Client descriptor does not exist"));
 
-    auto group = it->second;
+    auto& group = it->second;
 
     group->queueWrite(message);
 }
