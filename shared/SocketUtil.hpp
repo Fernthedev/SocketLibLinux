@@ -11,10 +11,9 @@
 #include <sstream>
 
 #ifdef DEBUG
-#warning "Debug logs!"
+#warning "Debug logs enabled!"
 #define coutdebug std::cout
 #else
-#warning "No more debug logs"
 #define coutdebug std::stringstream()
 #endif
 
