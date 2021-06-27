@@ -39,18 +39,20 @@ namespace SocketLib {
         void registerConnectCallback(const ConnectCallback& callback);
         void clearConnectCallbacks() noexcept;
 
+        ///
+        /// \return
         [[nodiscard]] bool isActive() const;
 
-        /**
-         * This will set active to false and stop the threads, however it is recommended to instead
-         * delete the Server socket or at least do it after
-         */
+         /// This will set active to false and stop the threads, however it is recommended to instead
+         /// delete the Server socket or at least do it after
         void notifyStop();
 
         // Socket settings
         uint32_t bufferSize = 512;
 
-        bool isDestroyed() const;
+        /// Returns true if the destructor has been called at least once
+        /// \return
+        [[nodiscard]] bool isDestroyed() const;
     private:
         uint32_t id;
 

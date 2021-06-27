@@ -11,6 +11,7 @@ namespace SocketLib {
     public:
         explicit ServerSocket(SocketHandler *socketHandler, uint32_t id, uint32_t port);
 
+        /// Binds to the port and starts listening
         void bindAndListen();
 
         void setupReuseAddr(int yes=1) {
@@ -23,6 +24,7 @@ namespace SocketLib {
 
         ~ServerSocket() override;
 
+        /// Disconnects the client
         void closeClient(int clientDescriptor);
 
         sockaddr_storage getPeerName(int clientDescriptor);
@@ -40,6 +42,7 @@ namespace SocketLib {
         void onDisconnectClient(int clientDescriptor) override;
 
     private:
+        /// Connection listen loop
         void connectionListenLoop();
 
         std::thread connectionListenThread;

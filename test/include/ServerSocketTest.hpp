@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ServerSocket.hpp"
-#include "FieldWrapper.hpp"
 
 namespace SocketLib {
     class ServerSocketTest {

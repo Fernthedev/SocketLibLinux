@@ -12,7 +12,8 @@
 
 using namespace SocketLib;
 
-SocketLib::Socket::Socket(SocketHandler* socketHandler, uint32_t id, std::optional<std::string> address, uint32_t port) : socketHandler(socketHandler), id(id), host(std::move(address)),  port(port) {
+SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::optional<std::string> address, uint32_t port)
+        : socketHandler(socketHandler), id(id), host(std::move(address)), port(port) {
     servInfo = Utils::resolveEndpoint(address ? address->c_str() : nullptr, std::to_string(port).c_str());
 
     Utils::throwIfError(servInfo);
@@ -63,7 +64,7 @@ const std::vector<ConnectCallback> &Socket::getConnectCallbacks() const {
     return connectCallbacks;
 }
 
-void Socket:: registerConnectCallback(const ConnectCallback &callback) {
+void Socket::registerConnectCallback(const ConnectCallback &callback) {
     std::unique_lock<std::mutex> lock(connectMutex);
     connectCallbacks.push_back(callback);
 }
@@ -86,13 +87,15 @@ bool Socket::isDestroyed() const {
     return destroyed;
 }
 
-Socket::ReadSendThreads::ReadSendThreads(Socket& socket, int clientDescriptor) : socket(socket), clientDescriptor(clientDescriptor),active(true),
+Socket::ReadSendThreads::ReadSendThreads(Socket &socket, int clientDescriptor) : socket(socket),
+                                                                                 clientDescriptor(clientDescriptor),
+                                                                                 active(true),
                                                                                  writeConsumeToken(writeQueue) {
     this->writeThread = std::thread(&ReadSendThreads::writeThreadLoop, this);
     this->readThread = std::thread(&ReadSendThreads::readThreadLoop, this);
 }
 
-void Socket::ReadSendThreads::queueWrite(const Message& msg) {
+void Socket::ReadSendThreads::queueWrite(const Message &msg) {
     if (std::this_thread::get_id() == writeThread.get_id()) {
         // TODO: Immediately send only if queue empty? If not, queue up when there's work on the queue
         sendData(msg);
@@ -139,7 +142,7 @@ void Socket::ReadSendThreads::readThreadLoop() {
                 }
             }
         }
-    } catch(std::exception& e) {
+    } catch (std::exception &e) {
         fprintf(stderr, "Closing socket because it has crashed fatally while reading: %s", e.what());
         socket.onDisconnectClient(clientDescriptor);
     } catch (...) {
@@ -161,7 +164,7 @@ void Socket::ReadSendThreads::writeThreadLoop() {
                 sendData(message);
             } else continue;
         }
-    } catch(std::exception& e) {
+    } catch (std::exception &e) {
         fprintf(stderr, "Closing socket because it has crashed fatally while writing: %s", e.what());
         socket.onDisconnectClient(clientDescriptor);
 
@@ -171,7 +174,7 @@ void Socket::ReadSendThreads::writeThreadLoop() {
     }
 }
 
-void Socket::ReadSendThreads::sendData(const Message& message) {
+void Socket::ReadSendThreads::sendData(const Message &message) {
     long sent_bytes = send(clientDescriptor, message.data(), message.length(), 0);
 
     // Queue up remaining data
