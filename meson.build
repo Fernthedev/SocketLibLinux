@@ -4,7 +4,7 @@ project('SocketLib', 'cpp', default_options : ['c_std=c11', 'cpp_std=c++20','-DD
 #add_project_link_arguments(['-stdlib=libc++','-lstdc++fs'], language : 'cpp')
 thread_dep = dependency('threads')
 
-libDir = include_directories('include', 'shared')
+libDir = include_directories('shared')
 mainDir = include_directories('test/include')
 
 libSocketLib = shared_library('socket_lib', [
