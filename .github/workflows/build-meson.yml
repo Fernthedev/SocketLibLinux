@@ -19,7 +19,13 @@ jobs:
           submodules: true
           lfs: true
 
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.x' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+          architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
+
+      - name: Download meson
+        run: sudo pip3 install meson
       - uses: BSFishy/meson-build@v1.0.1
         with:
           action: build
