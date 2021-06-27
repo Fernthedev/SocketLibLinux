@@ -44,9 +44,14 @@ void SocketLib::SocketHandler::threadLoop() {
     while (active) {
         WorkT work;
         // TODO: Find a way to forcefully stop waiting for deque
-        // TODO: Make this catch all exceptions so the thread doesn't die?
+
         if (workQueue.wait_dequeue_timed(consumerToken, work, std::chrono::milliseconds(5))) {
-            work();
+            try {
+                work();
+            } catch (std::exception& e) {
+                fprintf(stderr, "Caught exception in thread pool (treat this as an error): %s", e.what());
+                // TODO: Is this the best way to handle this?
+            }
         } else continue;
     }
 }
