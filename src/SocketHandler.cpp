@@ -52,7 +52,9 @@ void SocketLib::SocketHandler::threadLoop() {
                 fprintf(stderr, "Caught exception in thread pool (treat this as an error): %s", e.what());
                 // TODO: Is this the best way to handle this?
             }
-        } else continue;
+        } else {
+            std::this_thread::yield();
+        }
     }
 }
 

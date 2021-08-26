@@ -142,13 +142,12 @@ void Channel::readThreadLoop() {
 
                 Message message(receivedBuf, recv_bytes);
 
-                if (!listenCallbacks.empty())
-                    socket.getSocketHandler()->queueWork([=] {
-                        for (const auto &listener : listenCallbacks) {
-                            // I kinda wanted it to be each event is async but I guess not
-                            listener(*this, message);
-                        }
-                    });
+                if (!listenCallbacks.empty()) {
+                    for (const auto &listener : listenCallbacks) {
+                        // I kinda wanted it to be each event is async but I guess not
+                        listener(*this, message);
+                    }
+                }
             }
         }
     } catch (std::exception &e) {
@@ -170,7 +169,9 @@ void Channel::writeThreadLoop() {
             // TODO: Find a way to forcefully stop waiting for deque
             if (writeQueue.wait_dequeue_timed(writeConsumeToken, message, std::chrono::milliseconds(5))) {
                 sendData(message);
-            } else continue;
+            } else {
+                std::this_thread::yield();
+            };
         }
     } catch (std::exception &e) {
         fprintf(stderr, "Closing socket because it has crashed fatally while writing: %s", e.what());
