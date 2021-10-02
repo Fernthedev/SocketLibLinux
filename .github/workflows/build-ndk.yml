@@ -23,7 +23,7 @@ jobs:
 
       - name: Setup NDK
         id: setup-ndk
-        uses: nttld/setup-ndk@v1.0.3
+        uses: nttld/setup-ndk@v1
         with:
           ndk-version: r23
 
