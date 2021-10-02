@@ -69,19 +69,15 @@ void ServerSocket::onConnectedClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
     /// Is there a better way instead of lambda?
     std::unique_ptr<Channel> channel = std::make_unique<Channel>(*this, clientDescriptor, [this](int c) { onDisconnectClient(c); },
-                                             getListenCallbacks());
+                                             listenCallback);
 
     auto* channelPtr = channel.get();
 
     clientDescriptors.emplace(clientDescriptor, std::move(channel));
 
-    if (!getConnectCallbacks().empty()) {
-        socketHandler->queueWork([=] {
-            for (const auto &callback : getConnectCallbacks()) {
-                // TODO: Catch exceptions?
-                // TODO: Should we even use reference types here?
-                callback(*channelPtr, true);
-            }
+    if (!connectCallback.empty()) {
+        socketHandler->queueWork([channelPtr, this] {
+            connectCallback.invoke(*channelPtr, true);
         });
     }
 }
@@ -96,14 +92,12 @@ void ServerSocket::onDisconnectClient(int clientDescriptor) {
 
     Channel* channel = it->second.get();
     // This has to be done to ensure we don't call the destructor when a Channel calls this
-    socketHandler->queueWork([=] {
+    socketHandler->queueWork([this, clientDescriptor, channel] {
         closeClient(clientDescriptor);
-        if (!getConnectCallbacks().empty()) {
-            for (const auto &callback : getConnectCallbacks()) {
-                // TODO: Catch exceptions?
-                // TODO: Should we even use reference types here?
-                callback(*channel, false);
-            }
+        if (!connectCallback.empty()) {
+            // TODO: Catch exceptions?
+            // TODO: Should we even use reference types here?
+            connectCallback.invoke(*channel, false);
         }
     });
 }

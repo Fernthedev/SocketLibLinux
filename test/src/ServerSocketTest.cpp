@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <iostream>
 #include <csignal>
+#include <thread>
 
 #include "SocketHandler.hpp"
 
@@ -26,19 +27,21 @@ void SocketLib::ServerSocketTest::startTest() {
 
     ServerSocket& serverSocket = *this->serverSocket;
 
-    serverSocket.registerConnectCallback([this](Channel& client, bool connected){
+    serverSocket.connectCallback += [this](Channel& client, bool connected){
         connectEvent(client, connected);
-    });
+    };
 
-    serverSocket.registerListenCallback([this](Channel& client, const Message& message){
+    serverSocket.listenCallback += [this](Channel& client, const Message& message){
         listenOnEvents(client, message);
-    });
+    };
 
     std::cout << "Listening server fully started up" << std::endl;
 
     // This is only to keep the test running.
     // When using as a lib, realistically you won't do this
-    while (serverSocket.isActive()) {}
+    while (serverSocket.isActive()) {
+        std::this_thread::yield();
+    }
 
     std::cout << "Finished server test, awaiting for server shutdown" << std::endl;
 
@@ -47,7 +50,7 @@ void SocketLib::ServerSocketTest::startTest() {
     delete this->serverSocket;
 }
 
-void ServerSocketTest::listenOnEvents(Channel& client, const Message &message) {
+void ServerSocketTest::listenOnEvents(Channel& client, const Message &message) const {
     auto msgStr = message.toString();
     std::cout << "Received: " << msgStr << std::endl;
 

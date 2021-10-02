@@ -4,13 +4,15 @@
 #include <vector>
 #include <functional>
 #include <thread>
-#include "queue/blockingconcurrentqueue.h"
 #include <optional>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <stdexcept>
+
+#include "queue/blockingconcurrentqueue.h"
+#include "utils/EventCallback.hpp"
 
 #include "Message.hpp"
 
@@ -21,25 +23,23 @@ namespace SocketLib {
     class Channel;
 
     // int is client descriptor, true if connect, false disconnected
-    using ConnectCallback = std::function<void(Channel&, bool)>;
-    using ListenCallback = std::function<void(Channel&, const Message&)>;
+    using ConnectCallbackFunc = std::function<void(Channel&, bool)>;
+    using ListenCallbackFunc = std::function<void(Channel&, const Message&)>;
+
+    using ConnectEventCallback = Utils::EventCallback<Channel&, bool>;
+    using ListenEventCallback = Utils::EventCallback<Channel&, const Message&>;
 
 
     class Socket {
     public:
         virtual ~Socket();
 
-        // No copying socket, we only have 1 instance ever alive.
-        Socket(const Socket&) = delete;
-        Socket& operator=(const Socket&) = delete;
+        // No copying socket
+        constexpr Socket(const Socket&) = delete;
+        constexpr Socket& operator=(const Socket&) = delete;
 
-        [[nodiscard]] const std::vector<ListenCallback>& getListenCallbacks() const;
-        void registerListenCallback(const ListenCallback& callback);
-        void clearListenCallbacks() noexcept;
-
-        [[nodiscard]] const std::vector<ConnectCallback>& getConnectCallbacks() const;
-        void registerConnectCallback(const ConnectCallback& callback);
-        void clearConnectCallbacks() noexcept;
+        ListenEventCallback listenCallback;
+        ConnectEventCallback connectCallback;
 
         ///
         /// \return
@@ -61,13 +61,6 @@ namespace SocketLib {
         [[nodiscard]] SocketHandler* getSocketHandler() const;
     private:
         uint32_t id;
-
-        std::vector<ListenCallback> listenCallbacks;
-        std::mutex callbackMutex;
-
-        std::vector<ConnectCallback> connectCallbacks;
-        std::mutex connectMutex;
-
     protected:
         explicit Socket(SocketHandler* socketHandler, uint32_t id, std::optional<std::string> address, uint32_t port);
 
@@ -88,10 +81,11 @@ namespace SocketLib {
 
     };
 
-    struct Channel {
-        Channel() = delete;
+    class Channel {
+    public:
+        constexpr Channel() = delete;
 
-        explicit Channel(Socket& socket, int clientDescriptor, std::function<void(int)> onDisconnect, std::vector<ListenCallback> listenCallbacks);
+        explicit Channel(Socket& socket, int clientDescriptor, std::function<void(int)> onDisconnect, ListenEventCallback& listenCallbacks);
 
         ~Channel();
 
@@ -107,7 +101,9 @@ namespace SocketLib {
 
     private:
         const std::function<void(int)> onDisconnectEvent;
-        const std::vector<ListenCallback> listenCallbacks;
+
+        // reference to socket
+        ListenEventCallback& listenCallbacks;
         bool active;
 
         /// TODO: Should we add a getter for Socket? Should it be const?

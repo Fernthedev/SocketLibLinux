@@ -13,7 +13,7 @@
 using namespace SocketLib;
 
 SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::optional<std::string> address, uint32_t port)
-        : socketHandler(socketHandler), id(id), host(std::move(address)), port(port) {
+        : id(id), socketHandler(socketHandler), host(std::move(address)), port(port) {
     servInfo = Utils::resolveEndpoint(address ? address->c_str() : nullptr, std::to_string(port).c_str());
 
     Utils::throwIfError(servInfo);
@@ -46,34 +46,6 @@ SocketLib::Socket::~Socket() {
     }
 }
 
-const std::vector<ListenCallback> &SocketLib::Socket::getListenCallbacks() const {
-    return listenCallbacks;
-}
-
-void Socket::registerListenCallback(const ListenCallback &callback) {
-    std::unique_lock<std::mutex> lock(callbackMutex);
-    listenCallbacks.push_back(callback);
-}
-
-void Socket::clearListenCallbacks() noexcept {
-    std::unique_lock<std::mutex> lock(callbackMutex);
-    listenCallbacks.clear();
-}
-
-const std::vector<ConnectCallback> &Socket::getConnectCallbacks() const {
-    return connectCallbacks;
-}
-
-void Socket::registerConnectCallback(const ConnectCallback &callback) {
-    std::unique_lock<std::mutex> lock(connectMutex);
-    connectCallbacks.push_back(callback);
-}
-
-void Socket::clearConnectCallbacks() noexcept {
-    std::unique_lock<std::mutex> lock(connectMutex);
-    connectCallbacks.clear();
-}
-
 
 bool Socket::isActive() const {
     return active;
@@ -91,13 +63,13 @@ SocketHandler *Socket::getSocketHandler() const {
     return socketHandler;
 }
 
-Channel::Channel(Socket &socket, int clientDescriptor, std::function<void(int)>  onDisconnect, std::vector<ListenCallback> listenCallbacks):
-            socket(socket),
+Channel::Channel(Socket &socket, int clientDescriptor, std::function<void(int)> onDisconnect, ListenEventCallback& listenCallbacks):
             clientDescriptor(clientDescriptor),
-            active(true),
-            writeConsumeToken(writeQueue),
             onDisconnectEvent(std::move(onDisconnect)),
-            listenCallbacks(std::move(listenCallbacks)) {
+            listenCallbacks(listenCallbacks),
+            active(true),
+            socket(socket),
+            writeConsumeToken(writeQueue) {
     this->writeThread = std::thread(&Channel::writeThreadLoop, this);
     this->readThread = std::thread(&Channel::readThreadLoop, this);
 }
@@ -143,10 +115,7 @@ void Channel::readThreadLoop() {
                 Message message(receivedBuf, recv_bytes);
 
                 if (!listenCallbacks.empty()) {
-                    for (const auto &listener : listenCallbacks) {
-                        // I kinda wanted it to be each event is async but I guess not
-                        listener(*this, message);
-                    }
+                    listenCallbacks.invoke(*this, message);
                 }
             }
         }
@@ -171,7 +140,7 @@ void Channel::writeThreadLoop() {
                 sendData(message);
             } else {
                 std::this_thread::yield();
-            };
+            }
         }
     } catch (std::exception &e) {
         fprintf(stderr, "Closing socket because it has crashed fatally while writing: %s", e.what());

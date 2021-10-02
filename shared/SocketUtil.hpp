@@ -23,8 +23,7 @@ namespace SocketLib {
         std::string port;
     };
 
-    class Utils {
-    public:
+    namespace Utils {
         static addrinfo* resolveEndpoint(const char* location, const char* port) {
             int status;
             struct addrinfo hints{};

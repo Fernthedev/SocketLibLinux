@@ -22,6 +22,6 @@ int main() {
 }
 
 void startTests() {
-    ServerSocketTest serverSocketTest;
+    ServerSocketTest serverSocketTest{};
     serverSocketTest.startTest();
 }
