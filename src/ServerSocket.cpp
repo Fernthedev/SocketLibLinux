@@ -1,17 +1,15 @@
-#include <SocketUtil.hpp>
 #include <unistd.h>
 #include <iostream>
 
+#include "SocketUtil.hpp"
 #include "ServerSocket.hpp"
 #include "SocketHandler.hpp"
 
-#define BACKLOG 10     // how many pending connections queue will hold
+#ifndef SOCKET_SERVER_BACKLOG
+#define SOCKET_SERVER_BACKLOG 10     // how many pending connections queue will hold
+#endif
 
 using namespace SocketLib;
-
-ServerSocket::ServerSocket(SocketHandler *socketHandler, uint32_t id, uint32_t port) : Socket(socketHandler, id, std::nullopt, port) {
-
-}
 
 void ServerSocket::bindAndListen() {
     if (isActive())
@@ -35,15 +33,15 @@ void ServerSocket::bindAndListen() {
 //        perror("listen");
 //        Utils::throwIfError(status);
 //    }
-    Utils::throwIfError(listen(socketDescriptor, BACKLOG));
+    Utils::throwIfError(listen(socketDescriptor, SOCKET_SERVER_BACKLOG));
 }
 
 
 ServerSocket::~ServerSocket() {
     coutdebug << "Deleting server socket" << std::endl;
-    for (auto& threadGroupPair : clientDescriptors) {
-        auto& group = threadGroupPair.second;
-        closeClient(group->clientDescriptor);
+    for (auto const& threadGroupPair : clientDescriptors) {
+        auto& channel = threadGroupPair.second;
+        closeClient(channel->clientDescriptor);
     }
 
     if (connectionListenThread.joinable())
@@ -60,6 +58,7 @@ ServerSocket::~ServerSocket() {
         if (status != 0) {
             perror("Unable to close");
         }
+        socketDescriptor = -1;
     }
 
     coutdebug << "Finish Deleting server socket" << std::endl;
@@ -67,9 +66,7 @@ ServerSocket::~ServerSocket() {
 
 void ServerSocket::onConnectedClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
-    /// Is there a better way instead of lambda?
-    std::unique_ptr<Channel> channel = std::make_unique<Channel>(*this, clientDescriptor, [this](int c) { onDisconnectClient(c); },
-                                             listenCallback);
+    std::unique_ptr<Channel> channel = std::make_unique<Channel>(*this, clientDescriptor);
 
     auto* channelPtr = channel.get();
 
@@ -80,26 +77,6 @@ void ServerSocket::onConnectedClient(int clientDescriptor) {
             connectCallback.invoke(*channelPtr, true);
         });
     }
-}
-
-void ServerSocket::onDisconnectClient(int clientDescriptor) {
-    std::shared_lock<std::shared_mutex> readLock(clientDescriptorsMutex);
-    auto it = clientDescriptors.find(clientDescriptor);
-    readLock.unlock();
-
-    if (it == clientDescriptors.end())
-        throw std::runtime_error(std::string("Client descriptor %d does not exist", clientDescriptor));
-
-    Channel* channel = it->second.get();
-    // This has to be done to ensure we don't call the destructor when a Channel calls this
-    socketHandler->queueWork([this, clientDescriptor, channel] {
-        closeClient(clientDescriptor);
-        if (!connectCallback.empty()) {
-            // TODO: Catch exceptions?
-            // TODO: Should we even use reference types here?
-            connectCallback.invoke(*channel, false);
-        }
-    });
 }
 
 void ServerSocket::write(int clientDescriptor, const Message& message) {
@@ -118,19 +95,25 @@ void ServerSocket::closeClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
     auto it = clientDescriptors.find(clientDescriptor);
 
-    if (it != clientDescriptors.end()) {
-        coutdebug << "Client being deleted:" << it->first << std::endl;
-        shutdown(clientDescriptor, SHUT_RDWR);
-        close(clientDescriptor);
-        auto& group = it->second;
-        clientDescriptors.erase(it);
+    if (it == clientDescriptors.end())
+        throw std::runtime_error(std::string("Client descriptor %d does not exist", clientDescriptor));
 
-        // TODO: Somehow validate that there are no memory leaks here?
-    } else {
-        shutdown(clientDescriptor, SHUT_RDWR);
-        close(clientDescriptor);
+
+    coutdebug << "Client being deleted:" << it->first << std::endl;
+    shutdown(clientDescriptor, SHUT_RDWR);
+    close(clientDescriptor);
+
+    Channel &channel = *it->second.get();
+    if (!connectCallback.empty()) {
+        // TODO: Catch exceptions?
+        // TODO: Should we even use reference types here?
+        connectCallback.invoke(channel, false);
     }
 
+    clientDescriptors.erase(it);
+
+
+    // TODO: Somehow validate that there are no memory leaks here?
     coutdebug << "Fully finished clearing client data from server memory." << std::endl;
 }
 

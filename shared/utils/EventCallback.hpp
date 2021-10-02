@@ -1,3 +1,5 @@
+#pragma once
+
 // taken from https://github.com/sc2ad/beatsaber-hook/blob/master/shared/utils/typedefs-wrappers.hpp
 
 #include <unordered_set>

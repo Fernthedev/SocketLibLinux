@@ -31,6 +31,8 @@ SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::option
 
         break;
     }
+
+    Utils::throwIfError(servInfo);
 }
 
 SocketLib::Socket::~Socket() {
@@ -63,10 +65,8 @@ SocketHandler *Socket::getSocketHandler() const {
     return socketHandler;
 }
 
-Channel::Channel(Socket &socket, int clientDescriptor, std::function<void(int)> onDisconnect, ListenEventCallback& listenCallbacks):
+Channel::Channel(Socket &socket, int clientDescriptor):
             clientDescriptor(clientDescriptor),
-            onDisconnectEvent(std::move(onDisconnect)),
-            listenCallbacks(listenCallbacks),
             active(true),
             socket(socket),
             writeConsumeToken(writeQueue) {
@@ -97,13 +97,13 @@ void Channel::readThreadLoop() {
                 continue;
 
             if (recv_bytes == 0) {
-                onDisconnectEvent(clientDescriptor);
+                socket.disconnectInternal(clientDescriptor);
 
                 return;
 
                 // Error
             } else if (recv_bytes < 0) {
-                onDisconnectEvent(clientDescriptor);
+                socket.disconnectInternal(clientDescriptor);
                 Utils::throwIfError((int) recv_bytes);
                 // Queue up remaining data
             } else {
@@ -114,17 +114,17 @@ void Channel::readThreadLoop() {
 
                 Message message(receivedBuf, recv_bytes);
 
-                if (!listenCallbacks.empty()) {
-                    listenCallbacks.invoke(*this, message);
+                if (!socket.listenCallback.empty()) {
+                    socket.listenCallback.invoke(*this, message);
                 }
             }
         }
     } catch (std::exception &e) {
         fprintf(stderr, "Closing socket because it has crashed fatally while reading: %s", e.what());
-        onDisconnectEvent(clientDescriptor);
+        socket.disconnectInternal(clientDescriptor);
     } catch (...) {
         fprintf(stderr, "Closing socket because it has crashed fatally while reading for an unknown reason");
-        onDisconnectEvent(clientDescriptor);
+        socket.disconnectInternal(clientDescriptor);
     }
 
     coutdebug << "Read loop ending" << std::endl;
@@ -144,11 +144,11 @@ void Channel::writeThreadLoop() {
         }
     } catch (std::exception &e) {
         fprintf(stderr, "Closing socket because it has crashed fatally while writing: %s", e.what());
-        onDisconnectEvent(clientDescriptor);
+        socket.disconnectInternal(clientDescriptor);
 
     } catch (...) {
         fprintf(stderr, "Closing socket because it has crashed fatally while writing for an unknown reason");
-        onDisconnectEvent(clientDescriptor);
+        socket.disconnectInternal(clientDescriptor);
     }
 }
 
@@ -174,7 +174,7 @@ void Channel::sendData(const Message &message) {
         queueWrite(Message(remainingBytes, length));
         delete[] remainingBytes;
     } else if (sent_bytes < 0) {
-        onDisconnectEvent(clientDescriptor);
+        socket.disconnectInternal(clientDescriptor);
         Utils::throwIfError((int) sent_bytes);
     }
 }

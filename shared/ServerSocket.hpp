@@ -9,7 +9,8 @@ namespace SocketLib {
 
     class ServerSocket : public Socket {
     public:
-        explicit ServerSocket(SocketHandler *socketHandler, uint32_t id, uint32_t port);
+        explicit ServerSocket(SocketHandler *socketHandler, uint32_t id, uint32_t port)
+        : Socket(socketHandler, id, std::nullopt, port) {}
 
         /// Binds to the port and starts listening
         void bindAndListen();
@@ -31,8 +32,8 @@ namespace SocketLib {
         HostPort getPeerAddress(int clientDescriptor);
 
         // TODO:
-        void getHostName();
-        void getHostByName();
+        void getHostName() {};
+        void getHostByName() {};
 
         /// This will write to the clientDescriptor
         /// Note: This is slower than Channel.queueWrite because it grabs a lock
@@ -40,10 +41,16 @@ namespace SocketLib {
         /// \param msg
         void write(int clientDescriptor, const Message& msg);
 
-    protected:
-        void onConnectedClient(int clientDescriptor) override;
+        std::unordered_map<int, std::unique_ptr<Channel>> const& getClients() const {
+            return clientDescriptors;
+        }
 
-        void onDisconnectClient(int clientDescriptor) override;
+    protected:
+        void onConnectedClient(int clientDescriptor);
+
+        void disconnectInternal(int clientDescriptor) override {
+            closeClient(clientDescriptor);
+        }
 
     private:
         /// Connection listen loop

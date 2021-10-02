@@ -48,14 +48,24 @@ namespace SocketLib {
             return servinfo;
         }
 
-        inline static void throwIfError(void* status) {
+        //// get sockaddr, IPv4 or IPv6:
+        static constexpr void *get_in_addr(struct sockaddr *sa)
+        {
+            if (sa->sa_family == AF_INET) {
+                return &(((struct sockaddr_in*)sa)->sin_addr);
+            }
+
+            return &(((struct sockaddr_in6*)sa)->sin6_addr);
+        }
+
+        constexpr static void throwIfError(void* status) {
             if (!status) {
                 perror("Null check");
                 throw std::runtime_error(std::string("Null check: "));
             }
         }
 
-        inline static void throwIfError(int status, int eq = 0) {
+        constexpr static void throwIfError(int status, int eq = 0) {
             if (status != eq) {
                 perror("error");
                 fprintf(stderr, "error: %s\n", strerror(status));
@@ -63,7 +73,7 @@ namespace SocketLib {
             }
         }
 
-        inline static void throwIfErrorInverse(int status, int eq = 0) {
+        constexpr static void throwIfErrorInverse(int status, int eq = 0) {
             if (status == eq) {
                 perror("error");
                 fprintf(stderr, "error: %s\n", strerror(status));

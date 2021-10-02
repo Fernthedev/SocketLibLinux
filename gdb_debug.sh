@@ -1,4 +1,4 @@
-#!bin/sh
+#!/bin/sh
 cd builddir
-meson compile
+meson compile &&
 gdbserver :8555 ./SocketLibMain

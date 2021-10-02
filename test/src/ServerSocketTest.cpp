@@ -61,5 +61,24 @@ void ServerSocketTest::listenOnEvents(Channel& client, const Message &message) c
         // this only sets the variable to false so the server socket can set active to false
         // which will release the loop and delete the pointer
         serverSocket->notifyStop();
+        return;
+    }
+
+    // Construct message
+    std::stringstream messageToOthers("Client ");
+
+    messageToOthers << std::to_string(client.clientDescriptor) << ": " << msgStr;
+
+    Message constructedMessage(messageToOthers.str());
+
+    // Forward message to other clients if any
+    if (serverSocket->getClients().size() > 1) {
+        for (auto& [id, client2]: serverSocket->getClients()) {
+            if (client.clientDescriptor == client2->clientDescriptor)
+                continue;
+
+
+            client2->queueWrite(constructedMessage);
+        }
     }
 }

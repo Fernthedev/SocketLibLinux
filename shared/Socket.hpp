@@ -41,6 +41,9 @@ namespace SocketLib {
         ListenEventCallback listenCallback;
         ConnectEventCallback connectCallback;
 
+        // Friend so can call listen callbacks and disconnect
+        friend class Channel;
+
         ///
         /// \return
         [[nodiscard]] bool isActive() const;
@@ -74,10 +77,7 @@ namespace SocketLib {
         const uint32_t port;
         int socketDescriptor = -1;
 
-        virtual void onConnectedClient(int clientDescriptor) = 0;
-        virtual void onDisconnectClient(int clientDescriptor) = 0;
-
-
+        virtual void disconnectInternal(int clientDescriptor) = 0;
 
     };
 
@@ -85,7 +85,7 @@ namespace SocketLib {
     public:
         constexpr Channel() = delete;
 
-        explicit Channel(Socket& socket, int clientDescriptor, std::function<void(int)> onDisconnect, ListenEventCallback& listenCallbacks);
+        explicit Channel(Socket& socket, int clientDescriptor);
 
         ~Channel();
 
@@ -100,10 +100,6 @@ namespace SocketLib {
         const int clientDescriptor;
 
     private:
-        const std::function<void(int)> onDisconnectEvent;
-
-        // reference to socket
-        ListenEventCallback& listenCallbacks;
         bool active;
 
         /// TODO: Should we add a getter for Socket? Should it be const?

@@ -11,7 +11,8 @@ libSocketLib = shared_library('socket_lib', [
 'src/Socket.cpp',
 'src/ServerSocket.cpp',
 'src/SocketHandler.cpp',
-'src/Message.cpp'
+'src/Message.cpp',
+'src/ClientSocket.cpp',
 ], include_directories : libDir, override_options : ['cpp_std=c++20'], dependencies : thread_dep, cpp_args: ['-DDEBUG'])
 libSocketLibDep = declare_dependency(link_with : libSocketLib,
   include_directories : libDir)
