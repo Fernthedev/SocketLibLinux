@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <memory>
 #include <cstring>
 #include <stdexcept>
@@ -49,7 +50,7 @@ namespace SocketLib {
         }
 
         //// get sockaddr, IPv4 or IPv6:
-        static constexpr void *get_in_addr(struct sockaddr *sa)
+        constexpr static void *get_in_addr(struct sockaddr *sa)
         {
             if (sa->sa_family == AF_INET) {
                 return &(((struct sockaddr_in*)sa)->sin_addr);
