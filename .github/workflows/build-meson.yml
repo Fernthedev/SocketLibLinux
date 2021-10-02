@@ -27,11 +27,11 @@ jobs:
       - name: Download meson
         run: sudo pip3 install meson
 
-       - name: Use Clang
-         run: |
-           sudo apt install -y clang
-           export CC=clang
-           export CXX=clang++
+      - name: Use Clang
+        run: |
+         sudo apt install -y clang
+         export CC=clang
+         export CXX=clang++
 
       - uses: BSFishy/meson-build@v1.0.1
         with:
