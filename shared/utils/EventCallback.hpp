@@ -7,119 +7,120 @@
 #include <functional>
 #include <shared_mutex>
 
+namespace SocketLib {
+    template<template<typename> typename Container, typename Item>
+    concept is_valid_container = requires(Container<Item> coll, Item item) {
+        coll.erase(item);
+        coll.emplace(item);
+        coll.clear();
+        coll.begin();
+        coll.end();
+        coll.size();
+    };
 
-template<template<typename> typename Container, typename Item>
-concept is_valid_container = requires(Container<Item> coll, Item item) {
-    coll.erase(item);
-    coll.emplace(item);
-    coll.clear();
-    coll.begin();
-    coll.end();
-    coll.size();
-};
+    template<class T>
+    struct AbstractFunction;
 
-template<class T>
-struct AbstractFunction;
+    template<typename R, typename T, typename... TArgs>
+    struct AbstractFunction<R(T *, TArgs...)> {
+        virtual T *instance() const = 0;
 
-template<typename R, typename T, typename... TArgs>
-struct AbstractFunction<R(T *, TArgs...)> {
-    virtual T *instance() const = 0;
+        [[nodiscard]] virtual void *ptr() const = 0;
 
-    virtual void *ptr() const = 0;
+        virtual R operator()(TArgs... args) const noexcept = 0;
 
-    virtual R operator()(TArgs... args) const noexcept = 0;
+        virtual ~AbstractFunction() = default;
+    };
 
-    virtual ~AbstractFunction() = default;
-};
+    template<class T>
+    struct FunctionWrapper;
 
-template<class T>
-struct FunctionWrapper;
-
-template<typename R, typename... TArgs>
-struct FunctionWrapper<R (*)(TArgs...)> : AbstractFunction<R(void *, TArgs...)> {
-    void *instance() const override {
-        return nullptr;
-    }
-
-    void *ptr() const override {
-        return reinterpret_cast<void *>(held);
-    }
-
-    R (*held)(TArgs...);
-
-    template<class F>
-    FunctionWrapper(F &&f) : held(f) {}
-
-    R operator()(TArgs... args) const noexcept override {
-        if constexpr (std::is_same_v<R, void>) {
-            held(args...);
-        } else {
-            return held(args...);
+    template<typename R, typename... TArgs>
+    struct FunctionWrapper<R (*)(TArgs...)> : AbstractFunction<R(void *, TArgs...)> {
+        [[nodiscard]] void *instance() const override {
+            return nullptr;
         }
-    }
-};
 
-template<typename R, typename T, typename... TArgs>
-struct FunctionWrapper<R (T::*)(TArgs...)> : AbstractFunction<R(void *, TArgs...)> {
-    void *instance() const override {
-        return _instance;
-    }
-
-    void *ptr() const override {
-        using fptr = R (T::*)(TArgs...);
-        union dat {
-            fptr wrapper;
-            void *data;
-        };
-        dat d{.wrapper = held};
-        return d.data;
-    }
-
-    R (T::*held)(TArgs...);
-
-    T *_instance;
-
-    template<class F>
-    FunctionWrapper(F &&f, T *inst) : held(f), _instance(inst) {}
-
-    R operator()(TArgs... args) const noexcept override {
-        if constexpr (std::is_same_v<R, void>) {
-            (reinterpret_cast<T *>(_instance)->*held)(args...);
-        } else {
-            return (reinterpret_cast<T *>(_instance)->*held)(args...);
+        [[nodiscard]] void *ptr() const override {
+            return reinterpret_cast<void *>(held);
         }
-    }
-};
 
-template<typename R, typename... TArgs>
-struct FunctionWrapper<std::function<R(TArgs...)>> : AbstractFunction<R(void *, TArgs...)> {
-    [[nodiscard]] void *instance() const override {
-        return nullptr;
-    }
+        R (*held)(TArgs...);
 
-    [[nodiscard]] void *ptr() const override {
-        return handle;
-    }
+        template<class F>
+        FunctionWrapper(F &&f) : held(f) {}
 
-    std::function<R(TArgs...)> const held;
-    void *handle;
-
-    FunctionWrapper(std::function<R(TArgs...)> const &f) : held(f),
-                                                           handle(const_cast<void *>(reinterpret_cast<const void *>(&f))) {}
-
-    R operator()(TArgs... args) const noexcept override {
-        if constexpr (std::is_same_v<R, void>) {
-            held(args...);
-        } else {
-            return held(args...);
+        R operator()(TArgs... args) const noexcept override {
+            if constexpr (std::is_same_v<R, void>) {
+                held(args...);
+            } else {
+                return held(args...);
+            }
         }
-    }
-};
+    };
 
+    template<typename R, typename T, typename... TArgs>
+    struct FunctionWrapper<R (T::*)(TArgs...)> : AbstractFunction<R(void *, TArgs...)> {
+        void *instance() const override {
+            return _instance;
+        }
+
+        void *ptr() const override {
+            using fptr = R (T::*)(TArgs...);
+            union dat {
+                fptr wrapper;
+                void *data;
+            };
+            dat d{.wrapper = held};
+            return d.data;
+        }
+
+        R (T::*held)(TArgs...);
+
+        T *_instance;
+
+        template<class F>
+        FunctionWrapper(F &&f, T *inst) : held(f), _instance(inst) {}
+
+        R operator()(TArgs... args) const noexcept override {
+            if constexpr (std::is_same_v<R, void>) {
+                (reinterpret_cast<T *>(_instance)->*held)(args...);
+            } else {
+                return (reinterpret_cast<T *>(_instance)->*held)(args...);
+            }
+        }
+    };
+
+    template<typename R, typename... TArgs>
+    struct FunctionWrapper<std::function<R(TArgs...)>> : AbstractFunction<R(void *, TArgs...)> {
+        [[nodiscard]] void *instance() const override {
+            return nullptr;
+        }
+
+        [[nodiscard]] void *ptr() const override {
+            return handle;
+        }
+
+        std::function<R(TArgs...)> const held;
+        void *handle;
+
+        FunctionWrapper(std::function<R(TArgs...)> const &f) : held(f),
+                                                               handle(const_cast<void *>(reinterpret_cast<const void *>(&f))) {}
+
+        R operator()(TArgs... args) const noexcept override {
+            if constexpr (std::is_same_v<R, void>) {
+                held(args...);
+            } else {
+                return held(args...);
+            }
+        }
+    };
+
+}
 namespace std {
     template<typename R, typename T, typename... TArgs>
-    struct hash<AbstractFunction<R(T *, TArgs...)>> {
-        std::size_t operator()(const AbstractFunction<R(T *, TArgs...)> &obj) const noexcept {
+    struct hash<SocketLib::AbstractFunction<R(T *, TArgs...)>> {
+        std::size_t operator()(const SocketLib::AbstractFunction<R(T *, TArgs...)> &obj) const noexcept {
             auto seed = std::hash<void *>{}(obj.instance());
             return seed ^ std::hash<void *>{}(reinterpret_cast<void *>(obj.ptr())) + 0x9e3779b9 + (seed << 6) +
                           (seed >> 2);
@@ -127,69 +128,78 @@ namespace std {
     };
 }
 
-template<typename R, typename T, typename... TArgs>
-bool operator==(const AbstractFunction<R(T *, TArgs...)> &a, const AbstractFunction<R(T *, TArgs...)> &b) {
-    return a.instance() == b.instance() && a.ptr() == b.ptr();
+namespace SocketLib {
+    template<typename R, typename T, typename... TArgs>
+    bool operator==(const AbstractFunction<R(T *, TArgs...)> &a, const AbstractFunction<R(T *, TArgs...)> &b) {
+        return a.instance() == b.instance() && a.ptr() == b.ptr();
+    }
+
+    template<typename R, typename T, typename... TArgs>
+    bool operator<(const AbstractFunction<R(T *, TArgs...)> &a, const AbstractFunction<R(T *, TArgs...)> &b) {
+        return a.ptr() < b.ptr();
+    }
+
+    template<class T>
+    struct ThinVirtualLayer;
+
 }
 
 template<typename R, typename T, typename... TArgs>
-bool operator<(const AbstractFunction<R(T *, TArgs...)> &a, const AbstractFunction<R(T *, TArgs...)> &b) {
-    return a.ptr() < b.ptr();
+struct std::hash<SocketLib::ThinVirtualLayer<R(T *, TArgs...)>>;
+
+namespace SocketLib {
+
+
+    template<typename R, typename T, typename... TArgs>
+    struct ThinVirtualLayer<R(T *, TArgs...)> {
+        friend struct std::hash<ThinVirtualLayer<R(T *, TArgs...)>>;
+    private:
+        std::shared_ptr<AbstractFunction<R(T *, TArgs...)>> func;
+
+    public:
+        ThinVirtualLayer(R (*ptr)(TArgs...)) : func(new FunctionWrapper<R (*)(TArgs...)>(ptr)) {}
+
+        template<class F, typename Q>
+        ThinVirtualLayer(F &&f, Q *inst) : func(new FunctionWrapper<R (Q::*)(TArgs...)>(f, inst)) {}
+
+        template<class F>
+        ThinVirtualLayer(F &&f) : func(new FunctionWrapper<std::function<R(TArgs...)>>(f)) {}
+
+        R operator()(TArgs... args) const noexcept {
+            (*func)(args...);
+        }
+
+        void *instance() const {
+            return func->instance();
+        }
+
+        void *ptr() const {
+            return func->ptr();
+        }
+
+        bool operator==(const ThinVirtualLayer<R(T *, TArgs...)> other) const {
+            return *func == (*other.func);
+        }
+
+        bool operator<(const ThinVirtualLayer<R(T *, TArgs...)> other) const {
+            return *func < *other.func;
+        }
+    };
+
 }
-
-template<class T>
-struct ThinVirtualLayer;
-
-template<typename R, typename T, typename... TArgs>
-struct std::hash<ThinVirtualLayer<R(T *, TArgs...)>>;
-
-template<typename R, typename T, typename... TArgs>
-struct ThinVirtualLayer<R(T *, TArgs...)> {
-    friend struct std::hash<ThinVirtualLayer<R(T *, TArgs...)>>;
-private:
-    std::shared_ptr<AbstractFunction<R(T *, TArgs...)>> func;
-
-public:
-    ThinVirtualLayer(R (*ptr)(TArgs...)) : func(new FunctionWrapper<R (*)(TArgs...)>(ptr)) {}
-
-    template<class F, typename Q>
-    ThinVirtualLayer(F &&f, Q *inst) : func(new FunctionWrapper<R (Q::*)(TArgs...)>(f, inst)) {}
-
-    template<class F>
-    ThinVirtualLayer(F &&f) : func(new FunctionWrapper<std::function<R(TArgs...)>>(f)) {}
-
-    R operator()(TArgs... args) const noexcept {
-        (*func)(args...);
-    }
-
-    void *instance() const {
-        return func->instance();
-    }
-
-    void *ptr() const {
-        return func->ptr();
-    }
-
-    bool operator==(const ThinVirtualLayer<R(T *, TArgs...)> other) const {
-        return *func == (*other.func);
-    }
-
-    bool operator<(const ThinVirtualLayer<R(T *, TArgs...)> other) const {
-        return *func < *other.func;
-    }
-};
 
 namespace std {
     template<typename R, typename T, typename... TArgs>
-    struct hash<ThinVirtualLayer<R(T *, TArgs...)>> {
-        std::size_t operator()(const ThinVirtualLayer<R(T *, TArgs...)> &obj) const noexcept {
-            return std::hash<AbstractFunction<R(T *, TArgs...)>>{}(*obj.func);
+    struct hash<SocketLib::ThinVirtualLayer<R(T *, TArgs...)>> {
+        std::size_t operator()(const SocketLib::ThinVirtualLayer<R(T *, TArgs...)> &obj) const noexcept {
+            return std::hash<SocketLib::AbstractFunction<R(T *, TArgs...)>>{}(*obj.func);
         }
     };
 }
 
 namespace SocketLib::Utils {
-    template<template<typename> typename Container, typename ...TArgs> requires(is_valid_container<Container, ThinVirtualLayer<void(void *, TArgs...)>>)
+    template<template<typename> typename Container, typename ...TArgs> requires(
+            is_valid_container<Container, ThinVirtualLayer<void(void *, TArgs...)>>)
     class BasicEventCallback {
     private:
         using functionType = ThinVirtualLayer<void(void *, TArgs...)>;
@@ -255,7 +265,6 @@ namespace SocketLib::Utils {
         }
 
 
-
         auto size() {
             return callbacks.size();
         }
@@ -267,7 +276,8 @@ namespace SocketLib::Utils {
 
     // Thread safe implementation
     // TODO: Reuse code somehow
-    template<template<typename> typename Container, typename ...TArgs> requires(is_valid_container<Container, ThinVirtualLayer<void(void *, TArgs...)>>)
+    template<template<typename> typename Container, typename ...TArgs> requires(
+            is_valid_container<Container, ThinVirtualLayer<void(void *, TArgs...)>>)
     class ThreadSafeEventCallback {
     private:
         using functionType = ThinVirtualLayer<void(void *, TArgs...)>;
@@ -305,7 +315,7 @@ namespace SocketLib::Utils {
             return *this;
         }
 
-        void addCallback(ThinVirtualLayer<void(void *, TArgs...)> const& callback) {
+        void addCallback(ThinVirtualLayer<void(void *, TArgs...)> const &callback) {
             std::unique_lock<std::shared_mutex> lock(mutex);
             callbacks.emplace(callback);
         }
@@ -328,7 +338,7 @@ namespace SocketLib::Utils {
             callbacks.erase(callback);
         }
 
-        void removeCallback(ThinVirtualLayer<void(void *, TArgs...)> const& callback) {
+        void removeCallback(ThinVirtualLayer<void(void *, TArgs...)> const &callback) {
             std::unique_lock<std::shared_mutex> lock(mutex);
             callbacks.erase(callback);
         }
@@ -350,7 +360,6 @@ namespace SocketLib::Utils {
                 }
             }
         }
-
 
 
         constexpr auto size() {
