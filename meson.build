@@ -1,4 +1,6 @@
-project('SocketLib', 'cpp', default_options : ['c_std=c11', 'cpp_std=c++20','-DDEBUG=true'])
+project('SocketLib', 'cpp', default_options : ['c_std=c11', 'cpp_std=c++20'])
+
+add_global_arguments('-DDEBUG=true', language : 'cpp')
 
 #add_project_arguments(['-stdlib=libc++'], language : 'cpp')
 #add_project_link_arguments(['-stdlib=libc++','-lstdc++fs'], language : 'cpp')
