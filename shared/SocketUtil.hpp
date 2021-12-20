@@ -10,6 +10,9 @@
 #include <csignal>
 #include <string>
 #include <sstream>
+#include <fmt/format.h>
+
+#include "SocketLogger.hpp"
 
 
 namespace SocketLib {
@@ -30,7 +33,7 @@ namespace SocketLib {
             hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
             if ((status = getaddrinfo(location, port, &hints, &servinfo)) != 0) {
-                fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
+                Logger::writeLog(LoggerLevel::ERROR, "ResolveEndpoint", fmt::format("getaddrinfo error: {}", gai_strerror(status)));
                 freeaddrinfo(servinfo); // free the linked-list
 
                 return nullptr;
@@ -53,26 +56,50 @@ namespace SocketLib {
             return &(((struct sockaddr_in6*)sa)->sin6_addr);
         }
 
-        constexpr static void throwIfError(void* status) {
+        /**
+         * Utility for error checking with template param
+         * @tparam isStatusError
+         * @param err
+         * @return
+         */
+        template<bool isStatusError>
+        static const char* getProperErrorString(int err) {
+            if constexpr(isStatusError) {
+                return strerror(err);
+            } else {
+                return strerror(errno);
+            }
+        }
+
+        static void logIfError(void* status, std::string_view message, std::string_view tag, LoggerLevel level = LoggerLevel::ERROR) {
             if (!status) {
-                perror("Null check");
-                throw std::runtime_error(std::string("Null check: "));
+                Logger::writeLog(level, tag, fmt::format("Failed to run method because of null. At: {}", message));
             }
         }
 
-        constexpr static void throwIfError(int status, int eq = 0) {
+        template<bool isStatusError = false>
+        static void logIfError(int status, std::string_view tag, std::string_view message, LoggerLevel level = LoggerLevel::ERROR) {
+            if (status != 0) {
+                Logger::writeLog(level, tag, fmt::format("Failed to run method: At: {} Cause: {}", message,
+                                                         getProperErrorString<isStatusError>(status)));
+            }
+        }
+
+        constexpr static void throwIfError(void* status, std::string_view tag) {
+            if (!status) {
+
+                Logger::writeLog(LoggerLevel::ERROR, tag, "Failed to run method because of null");
+
+                throw std::runtime_error("Null check: ");
+            }
+        }
+
+        template<bool isStatusError = false>
+        static void throwIfError(int status, std::string_view tag, int eq = 0) {
             if (status != eq) {
-                perror("error");
-                fprintf(stderr, "error: %s\n", strerror(status));
-                throw std::runtime_error(std::string("Failed to run method: ") + std::string(strerror(status)));
-            }
-        }
-
-        constexpr static void throwIfErrorInverse(int status, int eq = 0) {
-            if (status == eq) {
-                perror("error");
-                fprintf(stderr, "error: %s\n", strerror(status));
-                throw std::runtime_error(std::string("Failed to run method: ") + std::string(strerror(status)));
+                std::string err(fmt::format("Failed to run method: {}", getProperErrorString<isStatusError>(status)));
+                Logger::writeLog(LoggerLevel::ERROR, tag, err);
+                throw std::runtime_error(err);
             }
         }
 
@@ -84,7 +111,8 @@ namespace SocketLib {
                     getnameinfo((struct sockaddr *)&their_addr, sizeof their_addr,
                                 hostStr, sizeof hostStr,
                                 portStr, sizeof portStr,
-                                NI_NUMERICHOST | NI_NUMERICSERV)
+                                NI_NUMERICHOST | NI_NUMERICSERV),
+                                "getHostByAddress"
                     );
 
             return {

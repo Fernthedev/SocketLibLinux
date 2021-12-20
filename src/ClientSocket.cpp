@@ -27,7 +27,6 @@ ClientSocket::ClientSocket(SocketHandler *socketHandler, uint32_t id, const std:
 void ClientSocket::connect() {
     if (::connect(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen) == -1) {
         ::close(socketDescriptor);
-        perror("client: connect");
         clientLog(LoggerLevel::ERROR, "Failed to connect");
         throw std::runtime_error("Failed to connect");
     }
@@ -56,13 +55,11 @@ void ClientSocket::close() {
 
         if (status != 0) {
             clientLog(LoggerLevel::ERROR, "Unable to shut down client");
-            perror("Unable to shutdown client");
         }
 
         status = ::close(socketDescriptor);
         if (status != 0) {
             clientLog(LoggerLevel::ERROR, "Unable to close client");
-            perror("Unable to close client");
         }
 
         socketDescriptor = -1;

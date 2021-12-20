@@ -28,9 +28,9 @@ void ServerSocket::bindAndListen() {
 
     int opt = 1;
     // Forcefully attaching socket to the port 8080
-    Utils::throwIfError(setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)));
+    Utils::throwIfError(setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)), SERVER_LOG_TAG);
 
-    Utils::throwIfError(bind(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen));
+    Utils::throwIfError(bind(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen), SERVER_LOG_TAG);
 
     connectionListenThread = std::thread(&ServerSocket::connectionListenLoop, this);
 
@@ -39,7 +39,7 @@ void ServerSocket::bindAndListen() {
 //        perror("listen");
 //        Utils::throwIfError(status);
 //    }
-    Utils::throwIfError(listen(socketDescriptor, SOCKET_SERVER_BACKLOG));
+    Utils::throwIfError(listen(socketDescriptor, SOCKET_SERVER_BACKLOG), SERVER_LOG_TAG);
 }
 
 
@@ -56,16 +56,10 @@ ServerSocket::~ServerSocket() {
     if (socketDescriptor != -1) {
         int status = shutdown(socketDescriptor, SHUT_RDWR);
 
-        if (status != 0) {
-            serverLog(LoggerLevel::ERROR, "Unable to close");
-            perror("Unable to close");
-        }
-
+        Utils::logIfError(status, "Unable to shutdown", SERVER_LOG_TAG);
         status = close(socketDescriptor);
-        if (status != 0) {
-            serverLog(LoggerLevel::DEBUG_LEVEL, "Unable to close");
-            perror("Unable to close");
-        }
+
+        Utils::logIfError(status, "Unable to close", SERVER_LOG_TAG);
         socketDescriptor = -1;
     }
 
@@ -131,7 +125,7 @@ sockaddr_storage ServerSocket::getPeerName(int clientDescriptor) {
     struct sockaddr_storage their_addr{};
     socklen_t addr_size = sizeof their_addr;
 
-    Utils::throwIfError(getpeername(clientDescriptor, (struct sockaddr *)&their_addr, &addr_size));
+    Utils::throwIfError(getpeername(clientDescriptor, (struct sockaddr *)&their_addr, &addr_size), SERVER_LOG_TAG);
 
     return their_addr;
 }
@@ -148,8 +142,7 @@ void ServerSocket::connectionListenLoop() {
         int new_fd = accept(socketDescriptor, (struct sockaddr *) &their_addr, &addr_size);
 
         if (new_fd < 0) {
-            serverLog(LoggerLevel::ERROR, "Failed to accept client.");
-            perror("accept");
+            Utils::logIfError(new_fd, "Failed to accept client", SERVER_LOG_TAG);
             continue;
         } else {
             onConnectedClient(new_fd);

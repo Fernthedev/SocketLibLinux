@@ -17,15 +17,14 @@ SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::option
         : id(id), socketHandler(socketHandler), host(std::move(address)), port(port) {
     servInfo = Utils::resolveEndpoint(host ? host->c_str() : nullptr, std::to_string(port).c_str());
 
-    Utils::throwIfError(servInfo);
+    Utils::throwIfError(servInfo, SOCKET_LOG_TAG);
 
     for (auto p = servInfo; p != nullptr; p = p->ai_next) {
         Logger::writeLog(LoggerLevel::DEBUG_LEVEL, SOCKET_LOG_TAG, "creating socket");
         socketDescriptor = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 
         if (socketDescriptor == -1) {
-            Logger::writeLog(LoggerLevel::ERROR, SOCKET_LOG_TAG, "creating socket");
-            perror("server: socket");
+            Utils::logIfError(socketDescriptor, "creating socket", SOCKET_LOG_TAG);
             continue;
         }
 
@@ -34,7 +33,7 @@ SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::option
         break;
     }
 
-    Utils::throwIfError(servInfo);
+    Utils::throwIfError(servInfo, SOCKET_LOG_TAG);
 }
 
 SocketLib::Socket::~Socket() {
@@ -94,6 +93,7 @@ void Channel::readThreadLoop() {
 
 
             long recv_bytes = recv(clientDescriptor, buf, bufferSize, 0);
+            int err = errno;
 
             if (!active || !socket.isActive())
                 continue;
@@ -106,7 +106,7 @@ void Channel::readThreadLoop() {
                 // Error
             } else if (recv_bytes < 0) {
                 socket.disconnectInternal(clientDescriptor);
-                Utils::throwIfError((int) recv_bytes);
+                Utils::throwIfError<true>(err, CHANNEL_LOG_TAG);
                 // Queue up remaining data
             } else {
                 // Success
@@ -162,6 +162,7 @@ void Channel::sendData(const Message &message) {
     }
 
     long sent_bytes = send(clientDescriptor, message.data(), message.length(), 0);
+    int err = errno;
 
     // Queue up remaining data
     if (sent_bytes < message.length()) {
@@ -177,7 +178,7 @@ void Channel::sendData(const Message &message) {
         delete[] remainingBytes;
     } else if (sent_bytes < 0) {
         socket.disconnectInternal(clientDescriptor);
-        Utils::throwIfError((int) sent_bytes);
+        Utils::throwIfError<true>(err, CHANNEL_LOG_TAG);
     }
 }
 
