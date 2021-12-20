@@ -35,6 +35,48 @@ jobs:
          echo "CC=clang" >> $GITHUB_ENV
          echo "CXX=clang++" >> $GITHUB_ENV
 
+      - name: Get QPM
+        if: steps.cache-qpm.outputs.cache-hit != 'true'
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: cargo-build.yml
+          name: linux-qpm-rust
+          path: QPM
+          repo: RedBrumbler/QuestPackageManager-Rust
+
+      - name: QPM Collapse
+        run: |
+          chmod +x ./QPM/qpm-rust
+          ./QPM/qpm-rust collapse
+
+      - name: QPM Dependencies Cache
+        id: cache-qpm-deps
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-qpm-deps
+        with:
+          path: /home/runner/.local/share/QPM-Rust/cache
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('qpm.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: QPM Restore
+        run: |
+          chmod +x ./QPM/qpm-rust
+          ./QPM/qpm-rust restore
+
+      - name: List Post Restore
+        run: |
+          echo includes:
+          ls -la ${GITHUB_WORKSPACE}/extern/includes
+          echo libs:
+          ls -la ${GITHUB_WORKSPACE}/extern/libs
+          echo cache:
+          ls -la $HOME/.local/share/QPM-Rust/cache
+
       - uses: BSFishy/meson-build@v1.0.1
         with:
           action: build
