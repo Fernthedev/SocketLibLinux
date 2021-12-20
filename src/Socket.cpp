@@ -15,7 +15,7 @@ using namespace SocketLib;
 
 SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::optional<std::string> address, uint32_t port)
         : id(id), socketHandler(socketHandler), host(std::move(address)), port(port) {
-    servInfo = Utils::resolveEndpoint(address ? address->c_str() : nullptr, std::to_string(port).c_str());
+    servInfo = Utils::resolveEndpoint(host ? host->c_str() : nullptr, std::to_string(port).c_str());
 
     Utils::throwIfError(servInfo);
 
