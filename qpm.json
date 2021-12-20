@@ -7,7 +7,10 @@
     "version": "0.4.0",
     "url": "https://github.com/Fernthedev/SocketLibLinux",
     "additionalData": {
-      "overrideSoName": "libsocket_lib.so"
+      "soLink": "https://github.com/Fernthedev/SocketLibLinux/releases/download/v0.4.0/libsocket_lib.so",
+      "overrideSoName": "libsocket_lib.so",
+      "modLink": "https://github.com/Fernthedev/SocketLibLinux/releases/download/v0.4.0/socket_lib.qmod",
+      "branchName": "version-v0.4.0"
     }
   },
   "dependencies": [
