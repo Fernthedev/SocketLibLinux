@@ -12,6 +12,8 @@ This is a fully asynchronous library for sockets, made because _**some people**_
 # Usage:
 For now, look at [the test file](test/src/main.cpp)
 
+By default, it does NOT write to stdout using cout. Check out the entrypoint files such as `main.cpp` or `mainquest.cpp` for examples on listening to logs
+
 ## Testing in Linux/WSL
 To test, you must have:
 - Meson

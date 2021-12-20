@@ -1,6 +1,8 @@
 #include "main.hpp"
 #include "ServerSocketTest.hpp"
 
+#include "SocketLogger.hpp"
+
 #include <iostream>
 #include <exception>
 
@@ -11,7 +13,13 @@ int main() {
 //    std::set_terminate(__gnu_cxx::__verbose_terminate_handler);
 //#endif
 
+
     try {
+        // Subscribe to logger
+        Logger::loggerCallback += [](LoggerLevel level, std::string_view tag, std::string const& log){
+            fmt::print("[{}] ({}): {}\n", Logger::loggerLevelToStr(level), tag, log);
+        };
+
         std::cout << "Starting tests" << std::endl;
         startTests();
         std::cout << "Finished tests" << std::endl;

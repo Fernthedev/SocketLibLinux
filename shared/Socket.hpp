@@ -32,6 +32,8 @@ namespace SocketLib {
 
     class Socket {
     public:
+        constexpr static const std::string_view SOCKET_LOG_TAG = "socket_core";
+
         virtual ~Socket();
 
         // No copying socket
@@ -83,6 +85,7 @@ namespace SocketLib {
 
     class Channel {
     public:
+        constexpr static const std::string_view CHANNEL_LOG_TAG = "channel";
         constexpr Channel() = delete;
 
         explicit Channel(Socket& socket, int clientDescriptor);

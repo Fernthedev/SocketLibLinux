@@ -6,11 +6,17 @@
 #include <thread>
 
 #include "SocketHandler.hpp"
+#include "SocketLogger.hpp"
+
+constexpr static const std::string_view TEST_LOG_TAG = "ServerSocketTest";
+
+#define log(level, ...) Logger::writeLog(level, TEST_LOG_TAG, fmt::format(__VA_ARGS__))
 
 using namespace SocketLib;
 
 void SocketLib::ServerSocketTest::connectEvent(Channel& channel, bool connected) const {
-    std::cout << "Connected " << channel.clientDescriptor << " status: " << (connected ? "true" : "false") << std::endl;
+    log(LoggerLevel::INFO, "Connected {} status: {}", channel.clientDescriptor, connected ? "true" : "false");
+
 
     if (connected) {
         channel.queueWrite(Message("hi!\n"));
@@ -18,12 +24,12 @@ void SocketLib::ServerSocketTest::connectEvent(Channel& channel, bool connected)
 }
 
 void SocketLib::ServerSocketTest::startTest() {
-    std::cout << "Starting server at port 3306" << std::endl;
+    log(LoggerLevel::INFO, "Starting server at port 3306");
     SocketHandler& socketHandler = SocketHandler::getCommonSocketHandler();
 
     serverSocket = socketHandler.createServerSocket(3306);
     serverSocket->bindAndListen();
-    std::cout << "Started server\n";
+    log(LoggerLevel::INFO, "Started server");
 
     ServerSocket& serverSocket = *this->serverSocket;
 
@@ -35,7 +41,7 @@ void SocketLib::ServerSocketTest::startTest() {
         listenOnEvents(client, message);
     };
 
-    std::cout << "Listening server fully started up" << std::endl;
+    log(LoggerLevel::INFO, "Listening server fully started up");
 
     // This is only to keep the test running.
     // When using as a lib, realistically you won't do this
@@ -43,7 +49,7 @@ void SocketLib::ServerSocketTest::startTest() {
         std::this_thread::yield();
     }
 
-    std::cout << "Finished server test, awaiting for server shutdown" << std::endl;
+    log(LoggerLevel::INFO, "Finished server test, awaiting for server shutdown");
 
     // The destructor will remove the socket from the SocketHandler automatically.
     // You can use a smart pointer like unique pointer to handle this for you
@@ -52,10 +58,10 @@ void SocketLib::ServerSocketTest::startTest() {
 
 void ServerSocketTest::listenOnEvents(Channel& client, const Message &message) const {
     auto msgStr = message.toString();
-    std::cout << "Received: " << msgStr << std::endl;
+    log(LoggerLevel::INFO, "Received: {}", msgStr);
 
     if (msgStr.find("stop") != std::string::npos) {
-        coutdebug << "Stopping server now!" << std::endl;
+        log(LoggerLevel::INFO, "Stopping server now!");
 
         // This is not the recommended way to fully stop the server
         // this only sets the variable to false so the server socket can set active to false
@@ -65,11 +71,7 @@ void ServerSocketTest::listenOnEvents(Channel& client, const Message &message) c
     }
 
     // Construct message
-    std::stringstream messageToOthers("Client ");
-
-    messageToOthers << std::to_string(client.clientDescriptor) << ": " << msgStr;
-
-    Message constructedMessage(messageToOthers.str());
+    Message constructedMessage(fmt::format("Client {}: {}", client.clientDescriptor, msgStr));
 
     // Forward message to other clients if any
     if (serverSocket->getClients().size() > 1) {

@@ -15,6 +15,11 @@
       "id": "modloader",
       "versionRange": "*",
       "additionalData": {}
+    },
+    {
+      "id": "fmt",
+      "versionRange": "*",
+      "additionalData": {}
     }
   ],
   "additionalData": {}

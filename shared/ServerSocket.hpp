@@ -5,10 +5,15 @@
 #include <unordered_map>
 #include <shared_mutex>
 
+#include "SocketLogger.hpp"
+#include "fmt/format.h"
+
 namespace SocketLib {
 
     class ServerSocket : public Socket {
     public:
+        constexpr static const std::string_view SERVER_LOG_TAG = "server";
+
         explicit ServerSocket(SocketHandler *socketHandler, uint32_t id, uint32_t port)
         : Socket(socketHandler, id, std::nullopt, port) {}
 
@@ -19,7 +24,9 @@ namespace SocketLib {
             // lose the pesky "Address already in use" error message
             if (int status = setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes) == -1) {
                 perror("setsockopt");
-                throw std::invalid_argument("There was an error: " + std::string(gai_strerror(status)));
+                auto error = fmt::format("There was an error: {}", gai_strerror(status));
+                Logger::writeLog(LoggerLevel::ERROR, SERVER_LOG_TAG, error);
+                throw std::invalid_argument(error);
             }
         }
 

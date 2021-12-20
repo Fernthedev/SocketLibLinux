@@ -1,16 +1,14 @@
 {
   "_QPVersion": "0.1.1",
   "name": "SocketLib",
-  "id": "socket_lib",
+  "id": "${mod_id}",
   "author": "Fernthedev",
-  "version": "0.1.0",
+  "version": "${version}",
   "packageId": "com.beatgames.beatsaber",
   "packageVersion": "1.17.1",
-  "description": "socket_lib, version 0.1.0!",
+  "description": "${mod_id}, version ${version}!",
   "dependencies": [],
-  "modFiles": [
-    "libsocket_lib.so"
-  ],
+  "modFiles": [],
   "libraryFiles": [],
   "fileCopies": [],
   "copyExtensions": []

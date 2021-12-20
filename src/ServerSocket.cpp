@@ -9,14 +9,20 @@
 #define SOCKET_SERVER_BACKLOG 10     // how many pending connections queue will hold
 #endif
 
+#define serverLog(level, ...) Logger::writeLog(level, SERVER_LOG_TAG, fmt::format(__VA_ARGS__))
+
 using namespace SocketLib;
 
 void ServerSocket::bindAndListen() {
-    if (isActive())
-        throw std::runtime_error(std::string("Already running server!"));
+    if (isActive()) {
+        serverLog(LoggerLevel::ERROR, "Already running server!");
+        throw std::runtime_error("Already running server!");
+    }
 
-    if (destroyed)
-        throw std::runtime_error(std::string("Server already destroyed"));
+    if (destroyed) {
+        serverLog(LoggerLevel::ERROR, "Server already destroyed");
+        throw std::runtime_error("Server already destroyed");
+    }
 
     active = true;
 
@@ -38,7 +44,7 @@ void ServerSocket::bindAndListen() {
 
 
 ServerSocket::~ServerSocket() {
-    coutdebug << "Deleting server socket" << std::endl;
+    serverLog(LoggerLevel::DEBUG_LEVEL, "Deleting server socket");
     for (auto const& threadGroupPair : clientDescriptors) {
         auto& channel = threadGroupPair.second;
         closeClient(channel->clientDescriptor);
@@ -51,22 +57,24 @@ ServerSocket::~ServerSocket() {
         int status = shutdown(socketDescriptor, SHUT_RDWR);
 
         if (status != 0) {
+            serverLog(LoggerLevel::ERROR, "Unable to close");
             perror("Unable to close");
         }
 
         status = close(socketDescriptor);
         if (status != 0) {
+            serverLog(LoggerLevel::DEBUG_LEVEL, "Unable to close");
             perror("Unable to close");
         }
         socketDescriptor = -1;
     }
 
-    coutdebug << "Finish Deleting server socket" << std::endl;
+    serverLog(LoggerLevel::DEBUG_LEVEL, "Finish deleting server socket");
 }
 
 void ServerSocket::onConnectedClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
-    std::unique_ptr<Channel> channel = std::make_unique<Channel>(*this, clientDescriptor);
+    auto channel = std::make_unique<Channel>(*this, clientDescriptor);
 
     auto* channelPtr = channel.get();
 
@@ -83,9 +91,10 @@ void ServerSocket::write(int clientDescriptor, const Message& message) {
     std::shared_lock<std::shared_mutex> readLock(clientDescriptorsMutex);
     auto it = clientDescriptors.find(clientDescriptor);
 
-    if (it == clientDescriptors.end())
-        throw std::runtime_error(std::string("Client descriptor does not exist"));
-
+    if (it == clientDescriptors.end()) {
+        serverLog(LoggerLevel::ERROR, "Client descriptor does not exist");
+        throw std::runtime_error("Client descriptor does not exist");
+    }
     auto& group = it->second;
 
     group->queueWrite(message);
@@ -95,11 +104,12 @@ void ServerSocket::closeClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
     auto it = clientDescriptors.find(clientDescriptor);
 
-    if (it == clientDescriptors.end())
-        throw std::runtime_error(std::string("Client descriptor %d does not exist", clientDescriptor));
+    if (it == clientDescriptors.end()) {
+        serverLog(LoggerLevel::ERROR, "Client descriptor {} does not exist", clientDescriptor);
+        throw std::runtime_error(fmt::format("Client descriptor {} does not exist", clientDescriptor));
+    }
 
-
-    coutdebug << "Client being deleted:" << it->first << std::endl;
+    serverLog(LoggerLevel::DEBUG_LEVEL, "Client being deleted: {}", it->first);
     shutdown(clientDescriptor, SHUT_RDWR);
     close(clientDescriptor);
 
@@ -114,7 +124,7 @@ void ServerSocket::closeClient(int clientDescriptor) {
 
 
     // TODO: Somehow validate that there are no memory leaks here?
-    coutdebug << "Fully finished clearing client data from server memory." << std::endl;
+    serverLog(LoggerLevel::DEBUG_LEVEL, "Fully finished clearing client data from server memory.");
 }
 
 sockaddr_storage ServerSocket::getPeerName(int clientDescriptor) {
@@ -138,6 +148,7 @@ void ServerSocket::connectionListenLoop() {
         int new_fd = accept(socketDescriptor, (struct sockaddr *) &their_addr, &addr_size);
 
         if (new_fd < 0) {
+            serverLog(LoggerLevel::ERROR, "Failed to accept client.");
             perror("accept");
             continue;
         } else {

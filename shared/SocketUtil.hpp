@@ -11,12 +11,6 @@
 #include <string>
 #include <sstream>
 
-#ifdef DEBUG
-#warning "Debug logs enabled!"
-#define coutdebug std::cout
-#else
-#define coutdebug std::stringstream()
-#endif
 
 namespace SocketLib {
     struct HostPort {

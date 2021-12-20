@@ -11,6 +11,8 @@ namespace SocketLib {
 
     class ClientSocket : public Socket {
     public:
+        constexpr static const std::string_view CLIENT_LOG_TAG = "client";
+
         explicit ClientSocket(SocketHandler *socketHandler, uint32_t id, std::string const& address,
                      uint32_t port);
 

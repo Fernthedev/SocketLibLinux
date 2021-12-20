@@ -49,7 +49,7 @@ void SocketLib::SocketHandler::threadLoop() {
             try {
                 work();
             } catch (std::exception& e) {
-                fprintf(stderr, "Caught exception in thread pool (treat this as an error): %s", e.what());
+                Logger::writeLog(LoggerLevel::DEBUG_LEVEL, SOCKET_HANDLER_LOG_TAG, fmt::format("Caught exception in thread pool (treat this as an error): {}", e.what()));
                 // TODO: Is this the best way to handle this?
             }
         } else {

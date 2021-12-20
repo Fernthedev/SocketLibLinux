@@ -16,6 +16,8 @@ namespace SocketLib {
 
     class SocketHandler {
     public:
+        constexpr static const std::string_view SOCKET_HANDLER_LOG_TAG = "socket_handler";
+
         /// Creates a socket handler with the specified amount of threads in the thread pool
         /// \param maxThreads
         explicit SocketHandler(int maxThreads = 8);

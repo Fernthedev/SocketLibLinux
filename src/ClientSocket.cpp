@@ -7,6 +7,11 @@
 #include "SocketUtil.hpp"
 #include "ClientSocket.hpp"
 #include "SocketHandler.hpp"
+#include "SocketLogger.hpp"
+
+#include "fmt/format.h"
+
+#define clientLog(level, ...) Logger::writeLog(level, CLIENT_LOG_TAG, fmt::format(__VA_ARGS__))
 
 using namespace SocketLib;
 
@@ -15,7 +20,7 @@ ClientSocket::ClientSocket(SocketHandler *socketHandler, uint32_t id, const std:
     char s[INET6_ADDRSTRLEN];
     inet_ntop(servInfo->ai_family, Utils::get_in_addr((struct sockaddr *)servInfo->ai_addr), s, sizeof s);
 
-    coutdebug << "Connecting to " << s << std::endl;
+    clientLog(LoggerLevel::DEBUG_LEVEL, "Connecting to {}", s);
 }
 
 
@@ -23,7 +28,8 @@ void ClientSocket::connect() {
     if (::connect(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen) == -1) {
         ::close(socketDescriptor);
         perror("client: connect");
-        throw std::runtime_error(std::string("Failed to connect"));
+        clientLog(LoggerLevel::ERROR, "Failed to connect");
+        throw std::runtime_error("Failed to connect");
     }
 
 
@@ -38,10 +44,10 @@ void ClientSocket::connect() {
 }
 
 ClientSocket::~ClientSocket() {
-    coutdebug << "Deleting client socket" << std::endl;
+    clientLog(LoggerLevel::DEBUG_LEVEL, "Deleting client socket");
 
     close();
-    coutdebug << "Finish Deleting client socket" << std::endl;
+    clientLog(LoggerLevel::DEBUG_LEVEL, "Finish deleting client socket");
 }
 
 void ClientSocket::close() {
@@ -49,11 +55,13 @@ void ClientSocket::close() {
         int status = shutdown(socketDescriptor, SHUT_RDWR);
 
         if (status != 0) {
+            clientLog(LoggerLevel::ERROR, "Unable to shut down client");
             perror("Unable to shutdown client");
         }
 
         status = ::close(socketDescriptor);
         if (status != 0) {
+            clientLog(LoggerLevel::ERROR, "Unable to close client");
             perror("Unable to close client");
         }
 
@@ -67,7 +75,7 @@ void ClientSocket::close() {
         connectCallback.invoke(channelRef, false);
     }
 
-    coutdebug << "Closed client socket" << std::endl;
+    clientLog(LoggerLevel::DEBUG_LEVEL, "Closed client socket");
 
     // TODO: Somehow validate that there are no memory leaks here?
 }
