@@ -98,7 +98,7 @@ void Channel::readThreadLoop() {
             if (!active || !socket.isActive())
                 continue;
 
-            if (recv_bytes == 0) {
+            if (recv_bytes == 0 || err == ECONNRESET) {
                 socket.disconnectInternal(clientDescriptor);
 
                 return;
