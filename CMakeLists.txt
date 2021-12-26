@@ -1,6 +1,13 @@
 # include some defines automatically made by qpm
 include(qpm_defines.cmake)
 
+# Enable link time optimization
+# In my experience, this can be highly unstable but it nets a huge size optimization and likely performance
+# However, the instability was seen using Android.mk/ndk-build builds. With Ninja + CMake, this problem seems to have been solved.
+# As always, test thoroughly
+# - Fern
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
 cmake_minimum_required(VERSION 3.21)
 project(${COMPILE_ID})
 
@@ -56,12 +63,17 @@ target_link_libraries(${COMPILE_ID} PRIVATE -llog)
 include(extern.cmake)
 
 add_custom_command(TARGET ${COMPILE_ID} POST_BUILD
-        COMMAND ${CMAKE_STRIP} -g -S -d --strip-debug
+        COMMAND ${CMAKE_STRIP} -d --strip-all
         "lib${COMPILE_ID}.so" -o "stripped_lib${COMPILE_ID}.so"
         COMMENT "Strip debug symbols done on final binary.")
 
 add_custom_command(TARGET ${COMPILE_ID} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E rename lib${COMPILE_ID}.so debug_lib${COMPILE_ID}.so
+        COMMAND ${CMAKE_COMMAND} -E make_directory debug
+        COMMENT "Rename the lib to debug_ since it has debug symbols"
+        )
+
+add_custom_command(TARGET ${COMPILE_ID} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E rename lib${COMPILE_ID}.so debug/lib${COMPILE_ID}.so
         COMMENT "Rename the lib to debug_ since it has debug symbols"
         )
 
