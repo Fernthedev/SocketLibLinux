@@ -63,11 +63,6 @@ jobs:
           chmod +x ./QPM/qpm-rust
           ./QPM/qpm-rust restore
 
-      - name: QPM Legacy fix
-        run: |
-          chmod +x ./QPM/qpm-rust
-          ./QPM/qpm-rust cache legacy-fix
-
       - name: List Post Restore
         run: |
           echo includes:
