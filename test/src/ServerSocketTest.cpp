@@ -71,7 +71,7 @@ void ServerSocketTest::listenOnEvents(Channel& client, const Message &message) c
     }
 
     // Construct message
-    Message constructedMessage(fmt::format("Client {}: {}", client.clientDescriptor, msgStr));
+    Message constructedMessage(fmt::format("Client {}: {}\n", client.clientDescriptor, msgStr));
 
     // Forward message to other clients if any
     if (serverSocket->getClients().size() > 1) {

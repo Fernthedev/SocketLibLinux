@@ -172,7 +172,7 @@ void Channel::sendData(const Message &message) {
         size_t length = message.length() - sent_bytes;
         std::span<byte> remainingBytes(message.data() + startIndex, message.data() + startIndex + length);
 
-        queueWrite(Message(remainingBytes));
+        sendData(Message(remainingBytes));
     } else if (sent_bytes < 0) {
         socket.disconnectInternal(clientDescriptor);
         Utils::throwIfError<true>(err, CHANNEL_LOG_TAG);
