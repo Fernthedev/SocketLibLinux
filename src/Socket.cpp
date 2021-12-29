@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <iostream>
 
+#include <span>
 #include <utility>
 
 using namespace SocketLib;
@@ -144,7 +145,7 @@ void Channel::writeThreadLoop() {
                 std::this_thread::yield();
             }
         }
-    } catch (std::exception &e) {
+    } catch (std::exception const& e) {
         Logger::writeLog(LoggerLevel::ERROR, CHANNEL_LOG_TAG, fmt::format("Closing socket because it has crashed fatally while writing: {}", e.what()));
         socket.disconnectInternal(clientDescriptor);
 
@@ -169,13 +170,9 @@ void Channel::sendData(const Message &message) {
         long startIndex = sent_bytes;
 
         size_t length = message.length() - sent_bytes;
-        byte *remainingBytes = new byte[length];
+        std::span<byte> remainingBytes(message.data() + startIndex, message.data() + startIndex + length);
 
-
-        std::copy(message.data() + startIndex, message.data() + startIndex + length, remainingBytes);
-
-        queueWrite(Message(remainingBytes, length));
-        delete[] remainingBytes;
+        queueWrite(Message(remainingBytes));
     } else if (sent_bytes < 0) {
         socket.disconnectInternal(clientDescriptor);
         Utils::throwIfError<true>(err, CHANNEL_LOG_TAG);

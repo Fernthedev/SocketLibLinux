@@ -47,7 +47,7 @@ namespace SocketLib {
         /// \param msg
         void write(int clientDescriptor, const Message& msg);
 
-        std::unordered_map<int, std::unique_ptr<Channel>> const& getClients() const {
+        [[nodiscard]] std::unordered_map<int, std::unique_ptr<Channel>> const& getClients() const {
             return clientDescriptors;
         }
 

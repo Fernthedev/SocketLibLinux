@@ -3,6 +3,7 @@
 #include <memory>
 #include <cstring>
 #include <string>
+#include <span>
 
 // Heavily inspired from https://github.com/shuai132/SocketPP/blob/7741e80603b3a7ee06ee7ebbc74488935f2de41c/socketpp/RawMsg.h
 // Please don't mind, good library inspiration
@@ -28,8 +29,12 @@ namespace SocketLib {
             init(data, len);
         }
 
-        explicit Message(const std::string& data) {
-            init((byte*) data.data(), data.length());
+        explicit Message(std::span<byte> data) {
+            init(data.data(), data.size());
+        }
+
+        explicit Message(const std::string_view data) {
+            init(reinterpret_cast<const byte *>(data.data()), data.length());
         }
 
         Message(const Message& msg) {
@@ -78,8 +83,8 @@ namespace SocketLib {
             return _len;
         }
 
-        [[nodiscard]] std::string toString() const {
-            return std::string((char*) _data, 0, _len);
+        [[nodiscard]] std::string_view toString() const {
+            return {(char*) _data, _len};
         }
 
     private:
