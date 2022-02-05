@@ -7,11 +7,12 @@
   "packageId": "com.beatgames.beatsaber",
   "packageVersion": "1.17.1",
   "description": "socket_lib, version 0.1.0!",
+  "isLibrary": true,
   "dependencies": [],
-  "modFiles": [
+  "modFiles": [],
+  "libraryFiles": [
     "libsocket_lib.so"
   ],
-  "libraryFiles": [],
   "fileCopies": [],
   "copyExtensions": []
 }

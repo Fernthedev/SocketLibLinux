@@ -16,7 +16,7 @@ int main() {
 
     try {
         // Subscribe to logger
-        Logger::loggerCallback += [](LoggerLevel level, std::string_view tag, std::string const& log){
+        Logger::loggerCallback += [](LoggerLevel level, std::string_view const tag, std::string_view const log){
             fmt::print("[{}] ({}): {}\n", Logger::loggerLevelToStr(level), tag, log);
         };
 

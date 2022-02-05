@@ -362,7 +362,7 @@ namespace SocketLib::Utils {
         }
 
 
-        constexpr auto size() {
+        constexpr auto size() const {
             return callbacks.size();
         }
 
@@ -371,7 +371,7 @@ namespace SocketLib::Utils {
             callbacks.clear();
         }
 
-        constexpr bool empty() {
+        constexpr bool empty() const {
             return callbacks.empty();
         }
     };

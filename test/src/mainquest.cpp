@@ -18,8 +18,8 @@ extern "C" void setup(ModInfo& info) {
     modInfo = info;
 
     // Subscribe to logger
-    Logger::loggerCallback += [](LoggerLevel level, std::string_view tag, std::string const& log){
-        __android_log_print(ANDROID_LOG_DEBUG, fmt::format("[{}] QuestHook[{}]", Logger::loggerLevelToStr(level), tag).c_str(), "%s", log.c_str());
+    Logger::loggerCallback += [](LoggerLevel level, std::string_view tag, std::string_view const log){
+        __android_log_print(ANDROID_LOG_DEBUG, fmt::format("[{}] QuestHook[{}]", Logger::loggerLevelToStr(level), tag).c_str(), "%s", log.data());
     };
 }
 

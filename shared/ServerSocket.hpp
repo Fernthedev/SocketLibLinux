@@ -23,9 +23,7 @@ namespace SocketLib {
         void setupReuseAddr(int yes=1) {
             // lose the pesky "Address already in use" error message
             if (int status = setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes) == -1) {
-                auto error = fmt::format("There was an error: {}", gai_strerror(status));
-                Logger::writeLog(LoggerLevel::ERROR, SERVER_LOG_TAG, error);
-                throw std::invalid_argument(error);
+                Logger::fmtThrowError<std::invalid_argument>(SERVER_LOG_TAG, "There was an error: {}", gai_strerror(status));
             }
         }
 

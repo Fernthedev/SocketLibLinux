@@ -10,7 +10,7 @@
 
 constexpr static const std::string_view TEST_LOG_TAG = "ServerSocketTest";
 
-#define log(level, ...) Logger::writeLog(level, TEST_LOG_TAG, fmt::format(__VA_ARGS__))
+#define log(level, ...) Logger::fmtLog<level>(TEST_LOG_TAG, __VA_ARGS__)
 
 using namespace SocketLib;
 

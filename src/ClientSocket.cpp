@@ -11,7 +11,8 @@
 
 #include "fmt/format.h"
 
-#define clientLog(level, ...) Logger::writeLog(level, CLIENT_LOG_TAG, fmt::format(__VA_ARGS__))
+#define clientLog(level, ...) Logger::fmtLog<level>(CLIENT_LOG_TAG, __VA_ARGS__)
+#define clientErrorThrow(...) Logger::fmtThrowError(CLIENT_LOG_TAG, __VA_ARGS__)
 
 using namespace SocketLib;
 
@@ -27,8 +28,7 @@ ClientSocket::ClientSocket(SocketHandler *socketHandler, uint32_t id, const std:
 void ClientSocket::connect() {
     if (::connect(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen) == -1) {
         ::close(socketDescriptor);
-        clientLog(LoggerLevel::ERROR, "Failed to connect");
-        throw std::runtime_error("Failed to connect");
+        clientErrorThrow("Failed to connect");
     }
 
 

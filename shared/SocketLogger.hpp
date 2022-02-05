@@ -4,6 +4,7 @@
 
 #include <string>
 #include <string_view>
+#include <fmt/core.h>
 
 namespace SocketLib {
 
@@ -26,11 +27,34 @@ namespace SocketLib {
                     return "WARN";
                 case LoggerLevel::ERROR:
                     return "ERROR";
+                default:
+                    return "UNKNOWN LEVEL";
             }
         }
 
-        static Utils::UnorderedEventCallback<LoggerLevel, std::string_view, std::string const &> loggerCallback;
+        static bool DebugEnabled;
 
-        static void writeLog(LoggerLevel level, std::string_view tag, std::string const &log);
+        static Utils::UnorderedEventCallback<LoggerLevel, std::string_view const, std::string_view const> loggerCallback;
+
+        template<LoggerLevel lvl, typename... TArgs>
+        constexpr static void fmtLog(std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+            writeLog<lvl>(tag, fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
+        }
+
+        template<typename Exception = std::runtime_error, typename... TArgs>
+        inline static void fmtThrowError(std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+            fmtLog<LoggerLevel::ERROR, TArgs...>(tag, str, std::forward<TArgs>(args)...);
+            throw Exception(fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
+        }
+
+        template<LoggerLevel lvl>
+        constexpr static void writeLog(std::string_view const tag, std::string_view const log) {
+            if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
+                if (!DebugEnabled) return;
+            }
+            writeLogInternal(lvl, tag, log);
+        }
+
+        static void writeLogInternal(LoggerLevel level, std::string_view tag, std::string_view log);
     };
 }

@@ -21,7 +21,7 @@ SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::option
     Utils::throwIfError(servInfo, SOCKET_LOG_TAG);
 
     for (auto p = servInfo; p != nullptr; p = p->ai_next) {
-        Logger::writeLog(LoggerLevel::DEBUG_LEVEL, SOCKET_LOG_TAG, "creating socket");
+        Logger::writeLog<LoggerLevel::DEBUG_LEVEL>(SOCKET_LOG_TAG, "creating socket");
         socketDescriptor = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 
         if (socketDescriptor == -1) {
@@ -38,7 +38,7 @@ SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::option
 }
 
 SocketLib::Socket::~Socket() {
-    Logger::writeLog(LoggerLevel::DEBUG_LEVEL, SOCKET_LOG_TAG, "Destroy!");
+    Logger::writeLog<LoggerLevel::DEBUG_LEVEL>(SOCKET_LOG_TAG, "Destroy!");
     if (!destroyed) {
         destroyed = true;
         socketHandler->destroySocket(id);
@@ -82,7 +82,6 @@ void Channel::queueWrite(const Message &msg) {
         sendData(msg);
     } else {
         writeQueue.enqueue(msg);
-        Logger::writeLog(LoggerLevel::DEBUG_LEVEL, CHANNEL_LOG_TAG, "Queued write data");
     }
 }
 
@@ -123,14 +122,14 @@ void Channel::readThreadLoop() {
             }
         }
     } catch (std::exception &e) {
-        Logger::writeLog(LoggerLevel::ERROR, CHANNEL_LOG_TAG, fmt::format("Closing socket because it has crashed fatally while reading: {}", e.what()));
+        Logger::writeLog<LoggerLevel::ERROR>(CHANNEL_LOG_TAG, fmt::format("Closing socket because it has crashed fatally while reading: {}", e.what()));
         socket.disconnectInternal(clientDescriptor);
     } catch (...) {
-        Logger::writeLog(LoggerLevel::ERROR, CHANNEL_LOG_TAG, "Closing socket because it has crashed fatally while reading for an unknown reason");
+        Logger::writeLog<LoggerLevel::ERROR>(CHANNEL_LOG_TAG, "Closing socket because it has crashed fatally while reading for an unknown reason");
         socket.disconnectInternal(clientDescriptor);
     }
 
-    Logger::writeLog(LoggerLevel::DEBUG_LEVEL, CHANNEL_LOG_TAG, "Read loop ending");
+    Logger::writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Read loop ending");
 }
 
 void Channel::writeThreadLoop() {
@@ -146,11 +145,11 @@ void Channel::writeThreadLoop() {
             }
         }
     } catch (std::exception const& e) {
-        Logger::writeLog(LoggerLevel::ERROR, CHANNEL_LOG_TAG, fmt::format("Closing socket because it has crashed fatally while writing: {}", e.what()));
+        Logger::fmtLog<LoggerLevel::ERROR>(CHANNEL_LOG_TAG, "Closing socket because it has crashed fatally while writing: {}", e.what());
         socket.disconnectInternal(clientDescriptor);
 
     } catch (...) {
-        Logger::writeLog(LoggerLevel::ERROR, CHANNEL_LOG_TAG, "Closing socket because it has crashed fatally while writing for an unknown reason");
+        Logger::writeLog<LoggerLevel::ERROR>(CHANNEL_LOG_TAG, "Closing socket because it has crashed fatally while writing for an unknown reason");
         socket.disconnectInternal(clientDescriptor);
     }
 }
@@ -158,7 +157,7 @@ void Channel::writeThreadLoop() {
 void Channel::sendData(const Message &message) {
     // Throw exception here?
     if (!active || !socket.isActive()) {
-        Logger::writeLog(LoggerLevel::WARN, CHANNEL_LOG_TAG, "Sending data when socket isn't active, why?");
+        Logger::writeLog<LoggerLevel::WARN>(CHANNEL_LOG_TAG, "Sending data when socket isn't active, why?");
         return;
     }
 
@@ -186,16 +185,16 @@ Channel::~Channel() {
     std::lock_guard<std::mutex> lock2(deconstructMutex);
 
     if (readThread.joinable()) {
-        Logger::writeLog(LoggerLevel::DEBUG_LEVEL, CHANNEL_LOG_TAG, "Read ending");
+        Logger::writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Read ending");
         readThread.detach();
     }
 
     if (writeThread.joinable()) {
-        Logger::writeLog(LoggerLevel::DEBUG_LEVEL, CHANNEL_LOG_TAG, "Write ending");
+        Logger::writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Write ending");
         writeThread.join();
     }
 
-    Logger::writeLog(LoggerLevel::DEBUG_LEVEL, CHANNEL_LOG_TAG, "Ending read write thread");
+    Logger::writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Ending read write thread");
 }
 
 

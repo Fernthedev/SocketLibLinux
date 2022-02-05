@@ -9,19 +9,18 @@
 #define SOCKET_SERVER_BACKLOG 10     // how many pending connections queue will hold
 #endif
 
-#define serverLog(level, ...) Logger::writeLog(level, SERVER_LOG_TAG, fmt::format(__VA_ARGS__))
+#define serverLog(level, ...) Logger::fmtLog<level>(SERVER_LOG_TAG, __VA_ARGS__)
+#define serverErrorThrow(...) Logger::fmtThrowError(SERVER_LOG_TAG, __VA_ARGS__)
 
 using namespace SocketLib;
 
 void ServerSocket::bindAndListen() {
     if (isActive()) {
-        serverLog(LoggerLevel::ERROR, "Already running server!");
-        throw std::runtime_error("Already running server!");
+        serverErrorThrow("Already running server!");
     }
 
     if (destroyed) {
-        serverLog(LoggerLevel::ERROR, "Server already destroyed");
-        throw std::runtime_error("Server already destroyed");
+        serverErrorThrow("Server already destroyed");
     }
 
     active = true;
@@ -86,8 +85,7 @@ void ServerSocket::write(int clientDescriptor, const Message& message) {
     auto it = clientDescriptors.find(clientDescriptor);
 
     if (it == clientDescriptors.end()) {
-        serverLog(LoggerLevel::ERROR, "Client descriptor does not exist");
-        throw std::runtime_error("Client descriptor does not exist");
+        serverErrorThrow("Client descriptor {} does not exist", clientDescriptor);
     }
     auto& group = it->second;
 
@@ -99,8 +97,7 @@ void ServerSocket::closeClient(int clientDescriptor) {
     auto it = clientDescriptors.find(clientDescriptor);
 
     if (it == clientDescriptors.end()) {
-        serverLog(LoggerLevel::ERROR, "Client descriptor {} does not exist", clientDescriptor);
-        throw std::runtime_error(fmt::format("Client descriptor {} does not exist", clientDescriptor));
+        serverErrorThrow("Client descriptor {} does not exist", clientDescriptor);
     }
 
     serverLog(LoggerLevel::DEBUG_LEVEL, "Client being deleted: {}", it->first);

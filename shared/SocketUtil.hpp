@@ -33,7 +33,7 @@ namespace SocketLib {
             hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
             if ((status = getaddrinfo(location, port, &hints, &servinfo)) != 0) {
-                Logger::writeLog(LoggerLevel::ERROR, "ResolveEndpoint", fmt::format("getaddrinfo error: {}", gai_strerror(status)));
+                Logger::fmtLog<LoggerLevel::ERROR>("ResolveEndpoint", "getaddrinfo error: {}", gai_strerror(status));
                 freeaddrinfo(servinfo); // free the linked-list
 
                 return nullptr;
@@ -71,35 +71,30 @@ namespace SocketLib {
             }
         }
 
-        static void logIfError(void* status, std::string_view message, std::string_view tag, LoggerLevel level = LoggerLevel::ERROR) {
+        template<LoggerLevel lvl = LoggerLevel::ERROR>
+        static void logIfError(void* status, std::string_view message, std::string_view tag) {
             if (!status) {
-                Logger::writeLog(level, tag, fmt::format("Failed to run method because of null. At: {}", message));
+                Logger::fmtLog<lvl>(tag, "Failed to run method because of null. At: {}", message);
             }
         }
 
-        template<bool isStatusError = false>
-        static void logIfError(int status, std::string_view tag, std::string_view message, LoggerLevel level = LoggerLevel::ERROR) {
+        template<bool isStatusError = false, LoggerLevel lvl = LoggerLevel::ERROR>
+        static void logIfError(int status, std::string_view tag, std::string_view message) {
             if (status != 0) {
-                Logger::writeLog(level, tag, fmt::format("Failed to run method: At: {} Cause: {}", message,
-                                                         getProperErrorString<isStatusError>(status)));
+                Logger::fmtLog<lvl>(tag, "Failed to run method: At: {} Cause: {}", message, getProperErrorString<isStatusError>(status));
             }
         }
 
         constexpr static void throwIfError(void* status, std::string_view tag) {
             if (!status) {
-
-                Logger::writeLog(LoggerLevel::ERROR, tag, "Failed to run method because of null");
-
-                throw std::runtime_error("Null check: ");
+                Logger::fmtThrowError(tag, "Failed to run method because of null");
             }
         }
 
         template<bool isStatusError = false>
         static void throwIfError(int status, std::string_view tag, int eq = 0) {
             if (status != eq) {
-                std::string err(fmt::format("Failed to run method: {}", getProperErrorString<isStatusError>(status)));
-                Logger::writeLog(LoggerLevel::ERROR, tag, err);
-                throw std::runtime_error(err);
+                Logger::fmtThrowError(tag, "Failed to run method: {}", getProperErrorString<isStatusError>(status));
             }
         }
 
