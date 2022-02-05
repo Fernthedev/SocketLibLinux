@@ -34,7 +34,7 @@ namespace SocketLib {
     public:
         constexpr static const std::string_view SOCKET_LOG_TAG = "socket_core";
 
-        virtual ~Socket();
+        virtual ~Socket(); // call through SocketHandler
 
         // No copying socket
         constexpr Socket(const Socket&) = delete;
@@ -65,7 +65,8 @@ namespace SocketLib {
         /// TODO: Should we even have this or pass it manually where it's needed?
         [[nodiscard]] SocketHandler* getSocketHandler() const;
     private:
-        uint32_t id;
+        uint32_t const id;
+        friend class SocketHandler;
     protected:
         explicit Socket(SocketHandler* socketHandler, uint32_t id, std::optional<std::string> address, uint32_t port);
 

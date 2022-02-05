@@ -41,7 +41,6 @@ SocketLib::Socket::~Socket() {
     Logger::writeLog<LoggerLevel::DEBUG_LEVEL>(SOCKET_LOG_TAG, "Destroy!");
     if (!destroyed) {
         destroyed = true;
-        socketHandler->destroySocket(id);
 
         if (servInfo) {
             freeaddrinfo(servInfo);

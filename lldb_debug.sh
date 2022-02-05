@@ -1,4 +1,4 @@
 #!/bin/sh
 cd builddir
 meson compile &&
-gdbserver :8555 ./SocketLibMain $0
+lldb-server g :8555 ./SocketLibMain

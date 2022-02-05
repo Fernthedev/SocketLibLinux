@@ -43,6 +43,12 @@ namespace SocketLib {
 
         // Only way to call this properly is to call the socket's destructor
         void destroySocket(uint32_t id);
+        inline void destroySocket(Socket const* s) {
+            destroySocket(s->id);
+        }
+        inline void destroySocket(Socket const& s) {
+            destroySocket(s.id);
+        }
 
         /// Queues up work in the thread loop. Avoid calling this with code that locks
         /// \param work The work to be done in the thread loop

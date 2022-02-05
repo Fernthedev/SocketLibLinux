@@ -12,7 +12,7 @@ namespace SocketLib {
     using byte = unsigned char;
 
     struct Message {
-        inline void init(const byte* data, size_t len) {
+        constexpr void init(const byte* data, size_t len) {
             if (data == nullptr || len == 0) {
                 _len = 0;
                 _data = nullptr;
@@ -25,23 +25,23 @@ namespace SocketLib {
             memcpy(_data, data, len);
         }
 
-        explicit Message(const byte* data, size_t len) {
+        constexpr explicit Message(const byte* data, size_t len) {
             init(data, len);
         }
 
-        explicit Message(std::span<byte> data) {
+        constexpr explicit Message(std::span<byte> data) {
             init(data.data(), data.size());
         }
 
-        explicit Message(const std::string_view data) {
+        constexpr explicit Message(const std::string_view data) {
             init(reinterpret_cast<const byte *>(data.data()), data.length());
         }
 
-        Message(const Message& msg) {
+        constexpr Message(const Message& msg) {
             init(msg._data, msg._len);
         }
 
-        Message& operator=(const Message& msg) {
+        constexpr Message& operator=(const Message& msg) {
             if (&msg == this)
                 return *this;
 
@@ -71,7 +71,7 @@ namespace SocketLib {
             return move(other);
         }
 
-        ~Message() {
+        constexpr ~Message() {
             delete[] _data;
         }
 

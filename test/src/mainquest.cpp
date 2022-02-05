@@ -28,7 +28,7 @@ extern "C" void load() {
     // Run on a separate thread so the main thread doesn't freeze
     // Note this means the server will run indefinitely in the game
     std::thread([]{
-          startTests();
+          startTests(true);
     }).detach();
 }
 #endif

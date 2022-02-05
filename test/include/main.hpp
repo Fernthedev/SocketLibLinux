@@ -1,3 +1,3 @@
 #pragma once
 
-void startTests();
+void startTests(bool server);

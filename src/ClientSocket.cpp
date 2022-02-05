@@ -31,9 +31,8 @@ void ClientSocket::connect() {
         clientErrorThrow("Failed to connect");
     }
 
-
+    active = true;
     channel = std::make_unique<Channel>(*this, socketDescriptor);
-
 
     if (!connectCallback.empty()) {
         socketHandler->queueWork([this] {

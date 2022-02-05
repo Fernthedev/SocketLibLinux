@@ -24,6 +24,6 @@ libSocketLibDep = declare_dependency(link_with : libSocketLib,
   include_directories : [libDir, fmtInclude])
 
 
-testSrc = ['test/src/main.cpp', 'test/src/ServerSocketTest.cpp']
+testSrc = ['test/src/main.cpp', 'test/src/ServerSocketTest.cpp', 'test/src/ClientSocketTest.cpp']
 
-executable('SocketLibMain', testSrc, include_directories : mainDir, dependencies : [thread_dep, libSocketLibDep])
+executable('SocketLibMain', testSrc, include_directories : mainDir, dependencies : [thread_dep, libSocketLibDep], override_options : ['cpp_std=c++20'])

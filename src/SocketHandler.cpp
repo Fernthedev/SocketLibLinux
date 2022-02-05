@@ -40,8 +40,8 @@ void SocketLib::SocketHandler::destroySocket(uint32_t id) {
         std::unique_lock<std::shared_mutex> lock(socketMutex);
         auto& socket = it->second;
         sockets.erase(it);
+        nextId = id;
     }
-    nextId = id;
 }
 
 void SocketLib::SocketHandler::threadLoop() {

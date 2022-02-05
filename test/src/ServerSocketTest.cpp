@@ -53,7 +53,7 @@ void SocketLib::ServerSocketTest::startTest() {
 
     // The destructor will remove the socket from the SocketHandler automatically.
     // You can use a smart pointer like unique pointer to handle this for you
-    delete this->serverSocket;
+    socketHandler.destroySocket(this->serverSocket);
 }
 
 void ServerSocketTest::listenOnEvents(Channel& client, const Message &message) const {
