@@ -9,11 +9,20 @@ ServerSocket* SocketLib::SocketHandler::createServerSocket(uint32_t port) {
     std::unique_lock<std::shared_mutex> lock(socketMutex);
     uint32_t id = nextId;
     nextId = sockets.size();
-    auto socket = new ServerSocket(this, id, port);
+    auto socket = std::make_unique<ServerSocket>(this, id, port);
 
-    sockets.emplace(id, socket);
+    return static_cast<ServerSocket *>(sockets.emplace(id, std::move(socket)).first->second.get());
+}
 
-    return socket;
+ClientSocket *SocketHandler::createClientSocket(std::string const& address, uint32_t port) {
+    validateActive();
+
+    std::unique_lock<std::shared_mutex> lock(socketMutex);
+    uint32_t id = nextId;
+    nextId = sockets.size();
+    auto socket = std::make_unique<ClientSocket>(this, id, address, port);
+
+    return static_cast<ClientSocket *>(sockets.emplace(id, std::move(socket)).first->second.get());
 }
 
 
@@ -31,10 +40,6 @@ void SocketLib::SocketHandler::destroySocket(uint32_t id) {
         std::unique_lock<std::shared_mutex> lock(socketMutex);
         auto& socket = it->second;
         sockets.erase(it);
-
-        // Should this even be here? Probably not
-        if (!socket->isDestroyed())
-            delete socket;
     }
     nextId = id;
 }
@@ -49,7 +54,7 @@ void SocketLib::SocketHandler::threadLoop() {
             try {
                 work();
             } catch (std::exception& e) {
-                Logger::writeLog(LoggerLevel::DEBUG_LEVEL, SOCKET_HANDLER_LOG_TAG, fmt::format("Caught exception in thread pool (treat this as an error): {}", e.what()));
+                Logger::fmtLog<LoggerLevel::DEBUG_LEVEL>(SOCKET_HANDLER_LOG_TAG, "Caught exception in thread pool (treat this as an error): {}", e.what());
                 // TODO: Is this the best way to handle this?
             }
         } else {
@@ -77,10 +82,6 @@ SocketHandler::~SocketHandler() {
         threads.join();
     }
 
-
-    for (auto& socket : sockets) {
-        delete socket.second;
-    }
     sockets.clear();
 }
 

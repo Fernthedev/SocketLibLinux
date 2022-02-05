@@ -2,6 +2,7 @@
 
 #include "Socket.hpp"
 #include "ServerSocket.hpp"
+#include "ClientSocket.hpp"
 #include "queue/blockingconcurrentqueue.h"
 
 #include <mutex>
@@ -33,6 +34,13 @@ namespace SocketLib {
         /// @treturn The server socket pointer. You can free this with delete or use a smart pointer
         ServerSocket* createServerSocket(uint32_t port);
 
+        /// Creates a client socket binding with the port specified.
+        /// This does not automatically bind and start listening
+        /// @tparam port
+        /// @treturn The server socket pointer. You can free this with delete or use a smart pointer
+        ClientSocket* createClientSocket(std::string const& address, uint32_t port);
+
+
         // Only way to call this properly is to call the socket's destructor
         void destroySocket(uint32_t id);
 
@@ -56,7 +64,7 @@ namespace SocketLib {
         /// The thread loop for the thread pool
         void threadLoop();
 
-        std::unordered_map<uint32_t, ServerSocket*> sockets;
+        std::unordered_map<uint32_t, std::unique_ptr<Socket>> sockets;
         std::shared_mutex socketMutex;
 
         std::vector<std::thread> threadPool;

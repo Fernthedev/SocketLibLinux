@@ -21,8 +21,7 @@ namespace SocketLib {
 
         ~ClientSocket() override;
 
-        /// This will write to the clientDescriptor
-        /// Note: This is slower than Channel.queueWrite because it grabs a lock
+        /// Queues a write to the channel
         /// \param clientDescriptor
         /// \param msg
         constexpr void write(const Message& msg) {
