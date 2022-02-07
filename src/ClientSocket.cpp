@@ -11,8 +11,8 @@
 
 #include "fmt/format.h"
 
-#define clientLog(level, ...) Logger::fmtLog<level>(CLIENT_LOG_TAG, __VA_ARGS__)
-#define clientErrorThrow(...) Logger::fmtThrowError(CLIENT_LOG_TAG, __VA_ARGS__)
+#define clientLog(level, ...) getLogger().fmtLog<level>(CLIENT_LOG_TAG, __VA_ARGS__)
+#define clientErrorThrow(...) getLogger().fmtThrowError(CLIENT_LOG_TAG, __VA_ARGS__)
 
 using namespace SocketLib;
 

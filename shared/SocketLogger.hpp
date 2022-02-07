@@ -1,13 +1,14 @@
 #pragma once
 
 #include "utils/EventCallback.hpp"
+#include "queue/blockingconcurrentqueue.h"
 
 #include <string>
 #include <string_view>
+#include <utility>
 #include <fmt/core.h>
 
 namespace SocketLib {
-
     enum class LoggerLevel {
         DEBUG_LEVEL,
         INFO,
@@ -17,7 +18,10 @@ namespace SocketLib {
 
     class Logger {
     public:
-        constexpr static std::string_view loggerLevelToStr(LoggerLevel level) {
+        Logger() = default;
+        Logger(Logger const&) = delete;
+
+        static constexpr std::string_view loggerLevelToStr(LoggerLevel level) {
             switch (level) {
                 case LoggerLevel::DEBUG_LEVEL:
                     return "DEBUG";
@@ -32,29 +36,75 @@ namespace SocketLib {
             }
         }
 
-        static bool DebugEnabled;
-
-        static Utils::UnorderedEventCallback<LoggerLevel, std::string_view const, std::string_view const> loggerCallback;
+        bool DebugEnabled;
+        Utils::UnorderedEventCallback<LoggerLevel, std::string const&, std::string const&> loggerCallback;
 
         template<LoggerLevel lvl, typename... TArgs>
-        constexpr static void fmtLog(std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+        constexpr void fmtLog(std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
             writeLog<lvl>(tag, fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
         }
 
         template<typename Exception = std::runtime_error, typename... TArgs>
-        inline static void fmtThrowError(std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+        inline void fmtThrowError(std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
             fmtLog<LoggerLevel::ERROR, TArgs...>(tag, str, std::forward<TArgs>(args)...);
             throw Exception(fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
         }
 
         template<LoggerLevel lvl>
-        constexpr static void writeLog(std::string_view const tag, std::string_view const log) {
+        constexpr void writeLog(std::string_view const tag, std::string_view const log) {
             if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
                 if (!DebugEnabled) return;
             }
-            writeLogInternal(lvl, tag, log);
+            queueLogInternal(lvl, tag, log);
         }
 
-        static void writeLogInternal(LoggerLevel level, std::string_view tag, std::string_view log);
+        void queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log) {
+            logQueue.enqueue({level, tag, log});
+        }
+
+        [[nodiscard]] moodycamel::ProducerToken createProducerToken() {
+            return moodycamel::ProducerToken(logQueue);
+        }
+
+        // producer stuff
+#pragma region producer
+        template<LoggerLevel lvl, typename... TArgs>
+        constexpr void fmtLog(moodycamel::ProducerToken& producer, std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+            writeLog<lvl>(producer, tag, fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
+        }
+
+        template<typename Exception = std::runtime_error, typename... TArgs>
+        inline void fmtThrowError(moodycamel::ProducerToken& producer, std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+            fmtLog<LoggerLevel::ERROR, TArgs...>(producer, tag, str, std::forward<TArgs>(args)...);
+            throw Exception(fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
+        }
+
+        template<LoggerLevel lvl>
+        constexpr void writeLog(moodycamel::ProducerToken& token, std::string_view const tag, std::string_view const log) {
+            if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
+                if (!DebugEnabled) return;
+            }
+            queueLogInternal(token, lvl, tag, log);
+        }
+
+        void queueLogInternal(moodycamel::ProducerToken& producer, LoggerLevel level, std::string_view tag, std::string_view log) {
+            while(!logQueue.enqueue(producer, {level, tag, log}));
+        }
+#pragma endregion
+
+    private:
+        struct LogTask {
+            LoggerLevel level = LoggerLevel::DEBUG_LEVEL;
+            std::string tag;
+            std::string log;
+
+            LogTask() = default;
+            LogTask(LoggerLevel level, std::string_view tag, std::string_view log) : level(level), tag(tag),
+                                                                                         log(log) {}
+        };
+
+        moodycamel::BlockingConcurrentQueue<LogTask> logQueue;
+
+        friend class SocketHandler;
     };
 }

@@ -1,3 +1,4 @@
+#include "main.hpp"
 #include "ClientSocketTest.hpp"
 
 #include <cstdio>
@@ -11,7 +12,7 @@
 
 constexpr static const std::string_view TEST_LOG_TAG = "ClientSocketTest";
 
-#define log(level, ...) Logger::fmtLog<level>(TEST_LOG_TAG, __VA_ARGS__)
+#define log(level, ...) getLogger().fmtLog<level>(TEST_LOG_TAG, __VA_ARGS__)
 
 using namespace SocketLib;
 

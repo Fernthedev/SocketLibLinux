@@ -22,7 +22,7 @@ namespace SocketLib {
     };
 
     namespace Utils {
-        static addrinfo* resolveEndpoint(const char* location, const char* port) {
+        static addrinfo* resolveEndpoint(Logger& logger, const char* location, const char* port) {
             int status;
             struct addrinfo hints{};
             struct addrinfo *servinfo;  // will point to the results
@@ -33,7 +33,7 @@ namespace SocketLib {
             hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
             if ((status = getaddrinfo(location, port, &hints, &servinfo)) != 0) {
-                Logger::fmtLog<LoggerLevel::ERROR>("ResolveEndpoint", "getaddrinfo error: {}", gai_strerror(status));
+                logger.fmtLog<LoggerLevel::ERROR>("ResolveEndpoint", "getaddrinfo error: {}", gai_strerror(status));
                 freeaddrinfo(servinfo); // free the linked-list
 
                 return nullptr;
@@ -72,37 +72,37 @@ namespace SocketLib {
         }
 
         template<LoggerLevel lvl = LoggerLevel::ERROR>
-        static void logIfError(void* status, std::string_view message, std::string_view tag) {
+        static void logIfError(Logger& logger, void* status, std::string_view message, std::string_view tag) {
             if (!status) {
-                Logger::fmtLog<lvl>(tag, "Failed to run method because of null. At: {}", message);
+                logger.fmtLog<lvl>(tag, "Failed to run method because of null. At: {}", message);
             }
         }
 
         template<bool isStatusError = false, LoggerLevel lvl = LoggerLevel::ERROR>
-        static void logIfError(int status, std::string_view tag, std::string_view message) {
+        static void logIfError(Logger& logger, int status, std::string_view tag, std::string_view message) {
             if (status != 0) {
-                Logger::fmtLog<lvl>(tag, "Failed to run method: At: {} Cause: {}", message, getProperErrorString<isStatusError>(status));
+                logger.fmtLog<lvl>(tag, "Failed to run method: At: {} Cause: {}", message, getProperErrorString<isStatusError>(status));
             }
         }
 
-        constexpr static void throwIfError(void* status, std::string_view tag) {
+        constexpr static void throwIfError(Logger& logger, void* status, std::string_view tag) {
             if (!status) {
-                Logger::fmtThrowError(tag, "Failed to run method because of null");
+                logger.fmtThrowError(tag, "Failed to run method because of null");
             }
         }
 
         template<bool isStatusError = false>
-        static void throwIfError(int status, std::string_view tag, int eq = 0) {
+        static void throwIfError(Logger& logger, int status, std::string_view tag, int eq = 0) {
             if (status != eq) {
-                Logger::fmtThrowError(tag, "Failed to run method: {}", getProperErrorString<isStatusError>(status));
+                logger.fmtThrowError(tag, "Failed to run method: {}", getProperErrorString<isStatusError>(status));
             }
         }
 
-        static HostPort getHostByAddress(sockaddr_storage& their_addr) {
+        static HostPort getHostByAddress(Logger& logger, sockaddr_storage& their_addr) {
             char hostStr[NI_MAXHOST];
             char portStr[NI_MAXSERV];
 
-            Utils::throwIfError(
+            Utils::throwIfError(logger, 
                     getnameinfo((struct sockaddr *)&their_addr, sizeof their_addr,
                                 hostStr, sizeof hostStr,
                                 portStr, sizeof portStr,

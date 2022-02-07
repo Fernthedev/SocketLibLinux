@@ -16,11 +16,10 @@ extern "C" void setup(ModInfo& info) {
     info.id = MOD_ID;
     info.version = VERSION;
     modInfo = info;
+}
 
-    // Subscribe to logger
-    Logger::loggerCallback += [](LoggerLevel level, std::string_view tag, std::string_view const log){
-        __android_log_print(ANDROID_LOG_DEBUG, fmt::format("[{}] QuestHook[{}]", Logger::loggerLevelToStr(level), tag).c_str(), "%s", log.data());
-    };
+void handleLog(LoggerLevel level, std::string_view const tag, std::string_view const log) {
+    __android_log_print(ANDROID_LOG_DEBUG, fmt::format("[{}] QuestHook[{}]", Logger::loggerLevelToStr(level), tag).c_str(), "%s", log.data());
 }
 
 // Called later on in the game loading - a good time to install function hooks

@@ -21,6 +21,7 @@ namespace SocketLib {
     /// Forward declares
     class SocketHandler;
     class Channel;
+    class Logger;
 
     // int is client descriptor, true if connect, false disconnected
     using ConnectCallbackFunc = std::function<void(Channel&, bool)>;
@@ -80,6 +81,8 @@ namespace SocketLib {
         const uint32_t port;
         int socketDescriptor = -1;
 
+        Logger& getLogger();
+
         virtual void disconnectInternal(int clientDescriptor) = 0;
 
     };
@@ -111,6 +114,7 @@ namespace SocketLib {
 
         moodycamel::BlockingConcurrentQueue<Message> writeQueue;
 
+        Logger& getLogger();
         void sendData(const Message& message);
 
         std::mutex deconstructMutex;

@@ -58,11 +58,23 @@ namespace SocketLib {
         /// \return
         static SocketHandler& getCommonSocketHandler();
 
+        [[nodiscard]] SocketLib::Logger& getLogger() {
+            return logger;
+        }
+
+        [[nodiscard]] SocketLib::Logger const& getLogger() const {
+            return logger;
+        }
+
     private:
         inline void validateActive() const {
             if (!active)
                 throw std::runtime_error(std::string("Socket handler is no longer active!"));
         }
+
+        SocketLib::Logger logger;
+
+        void handleLogThread();
 
         uint32_t nextId = 0;
         bool active;
@@ -74,6 +86,7 @@ namespace SocketLib {
         std::shared_mutex socketMutex;
 
         std::vector<std::thread> threadPool;
+        std::thread loggerThread;
         moodycamel::BlockingConcurrentQueue<WorkT> workQueue;
     };
 }

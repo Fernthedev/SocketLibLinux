@@ -31,6 +31,8 @@ SocketLib::SocketHandler::SocketHandler(int maxThreads) : active(true) {
     for (int i = 0; i < maxThreads; i++) {
         threadPool.emplace_back(&SocketHandler::threadLoop, this);
     }
+
+    loggerThread = std::thread(&SocketHandler::handleLogThread, this);
 }
 
 void SocketLib::SocketHandler::destroySocket(uint32_t id) {
@@ -44,17 +46,32 @@ void SocketLib::SocketHandler::destroySocket(uint32_t id) {
     }
 }
 
+void SocketHandler::handleLogThread() {
+    moodycamel::ConsumerToken consumerToken(logger.logQueue);
+
+    while (active) {
+        Logger::LogTask task;
+        if (!logger.logQueue.try_dequeue(consumerToken, task)) {
+            std::this_thread::yield();
+            continue;
+        }
+
+        logger.loggerCallback.invoke(task.level, task.tag, task.log);
+    }
+}
+
 void SocketLib::SocketHandler::threadLoop() {
     moodycamel::ConsumerToken consumerToken(workQueue);
+    auto logToken = logger.createProducerToken();
     while (active) {
         WorkT work;
         // TODO: Find a way to forcefully stop waiting for deque
 
-        if (workQueue.wait_dequeue_timed(consumerToken, work, std::chrono::milliseconds(5))) {
+        if (workQueue.try_dequeue(consumerToken, work)) {
             try {
                 work();
             } catch (std::exception& e) {
-                Logger::fmtLog<LoggerLevel::DEBUG_LEVEL>(SOCKET_HANDLER_LOG_TAG, "Caught exception in thread pool (treat this as an error): {}", e.what());
+                logger.fmtLog<LoggerLevel::DEBUG_LEVEL>(logToken, SOCKET_HANDLER_LOG_TAG, "Caught exception in thread pool (treat this as an error): {}", e.what());
                 // TODO: Is this the best way to handle this?
             }
         } else {
@@ -82,6 +99,8 @@ SocketHandler::~SocketHandler() {
         threads.join();
     }
 
+    threadPool.clear();
+    loggerThread.detach();
     sockets.clear();
 }
 
