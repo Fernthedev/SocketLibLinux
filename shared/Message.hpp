@@ -87,6 +87,14 @@ namespace SocketLib {
             return {(char*) _data, _len};
         }
 
+        [[nodiscard]] std::span<const byte> toSpan() const {
+            return {_data, _len};
+        }
+
+        [[nodiscard]] explicit(false) operator std::span<const byte>() const {
+            return toSpan();
+        }
+
     private:
         size_t _len = 0;
         byte* _data = nullptr;
