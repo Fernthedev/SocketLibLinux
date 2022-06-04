@@ -17,8 +17,8 @@
       "additionalData": {}
     },
     {
-      "id": "fmt",
-      "versionRange": "*",
+      "id": "paper",
+      "versionRange": "^1.2.1",
       "additionalData": {}
     }
   ],

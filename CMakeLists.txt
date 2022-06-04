@@ -27,7 +27,7 @@ add_compile_definitions(VERSION=\"${MOD_VERSION}\")
 #add_compile_definitions(ID=\"${MOD_ID}\")
 add_compile_definitions(MOD_ID=\"${MOD_ID}\")
 add_compile_definitions(DEBUGB=1) # disable debug logs
-add_compile_definitions(QUEST=0)
+add_compile_definitions(QUEST)
 add_compile_definitions(FMT_HEADER_ONLY)
 
 # recursively get all src files

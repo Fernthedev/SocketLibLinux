@@ -3,6 +3,16 @@
 #include "utils/EventCallback.hpp"
 #include "queue/blockingconcurrentqueue.h"
 
+// Use paper log if possible
+#if __has_include("paper/shared/logger.hpp")
+#define SOCKETLIB_PAPER_LOG
+#include "paper/shared/logger.hpp"
+#endif
+
+#if defined(QUEST) && !defined(SOCKETLIB_PAPER_LOG)
+#warning Paper log is highly recommended for quest!
+#endif
+
 #include <string>
 #include <string_view>
 #include <utility>
@@ -10,11 +20,26 @@
 
 namespace SocketLib {
     enum class LoggerLevel {
-        DEBUG_LEVEL,
-        INFO,
-        WARN,
-        ERROR
+
+// PAPER LOG
+//        enum class LogLevel : uint8_t
+//        {
+//            DBG = 3,
+//            INF = 4,
+//            WRN = 5,
+//            ERR = 6,
+//            CRIT = 7,
+//            OFF = 0
+//        };
+        DEBUG_LEVEL = 3,
+        INFO = 4,
+        WARN = 5,
+        ERROR = 6
     };
+
+#ifdef SOCKETLIB_PAPER_LOG
+    static inline auto PaperLogger = Paper::Logger::WithContext<"SocketLib", false>();
+#endif
 
     class Logger {
     public:
@@ -55,11 +80,18 @@ namespace SocketLib {
             if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
                 if (!DebugEnabled) return;
             }
+
+#ifdef SOCKETLIB_PAPER_LOG
+            Paper::Logger::vfmtLog<(Paper::LogLevel) lvl>("[{}] {}", Paper::sl::current("","", 0, 0), PaperLogger.tag, fmt::make_format_args(tag, log));
+#else
             queueLogInternal(lvl, tag, log);
+#endif
         }
 
-        void queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log) {
+        inline void queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log) {
+#ifndef SOCKETLIB_PAPER_LOG
             logQueue.enqueue({level, tag, log});
+#endif
         }
 
         [[nodiscard]] moodycamel::ProducerToken createProducerToken() {
@@ -84,11 +116,17 @@ namespace SocketLib {
             if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
                 if (!DebugEnabled) return;
             }
+#ifdef SOCKETLIB_PAPER_LOG
+            Paper::Logger::vfmtLog<(Paper::LogLevel) lvl>("[{}] {}", Paper::sl::current("","", 0, 0), PaperLogger.tag, fmt::make_format_args(tag, log));
+#else
             queueLogInternal(token, lvl, tag, log);
+#endif
         }
 
-        void queueLogInternal(moodycamel::ProducerToken& producer, LoggerLevel level, std::string_view tag, std::string_view log) {
+        inline void queueLogInternal(moodycamel::ProducerToken& producer, LoggerLevel level, std::string_view tag, std::string_view log) {
+#ifndef SOCKETLIB_PAPER_LOG
             while(!logQueue.enqueue(producer, {level, tag, log}));
+#endif
         }
 #pragma endregion
 

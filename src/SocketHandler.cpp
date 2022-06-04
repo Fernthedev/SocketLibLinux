@@ -47,6 +47,7 @@ void SocketLib::SocketHandler::destroySocket(uint32_t id) {
 }
 
 void SocketHandler::handleLogThread() {
+#ifndef SOCKETLIB_PAPER_LOG
     moodycamel::ConsumerToken consumerToken(logger.logQueue);
 
     while (active) {
@@ -58,6 +59,7 @@ void SocketHandler::handleLogThread() {
 
         logger.loggerCallback.invoke(task.level, task.tag, task.log);
     }
+#endif
 }
 
 void SocketLib::SocketHandler::threadLoop() {
