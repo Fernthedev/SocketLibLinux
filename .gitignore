@@ -2,6 +2,8 @@ builddir
 ndkpath.txt
 .idea/sonarlint
 
+qpm_defines.cmake
+extern.cmake
 # For CI
 QPM/
 QPM_Temp/
