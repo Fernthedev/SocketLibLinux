@@ -66,6 +66,8 @@ jobs:
       - name: QPM Restore
         run: |
           chmod +x ./QPM/qpm-rust
+          ./QPM/qpm-rust dependency add fmt
+          ./QPM/qpm-rust dependency remove paper
           ./QPM/qpm-rust restore
 
       - name: List Post Restore
