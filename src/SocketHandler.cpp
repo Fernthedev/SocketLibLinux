@@ -71,6 +71,7 @@ void SocketLib::SocketHandler::threadLoop() {
 
         if (!workQueue.try_dequeue(consumerToken, work)) {
             std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
             continue;
         }
         try {

@@ -154,6 +154,7 @@ void Channel::writeThreadLoop() {
                 sendData(message);
             } else {
                 std::this_thread::yield();
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
         }
     } catch (std::exception const& e) {
