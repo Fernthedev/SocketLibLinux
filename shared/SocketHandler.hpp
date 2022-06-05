@@ -21,7 +21,7 @@ namespace SocketLib {
 
         /// Creates a socket handler with the specified amount of threads in the thread pool
         /// \param maxThreads
-        explicit SocketHandler(int maxThreads = 8);
+        explicit SocketHandler(int maxThreads = 2);
         ~SocketHandler();
 
         // No copying socket, we only have 1 instance ever alive.

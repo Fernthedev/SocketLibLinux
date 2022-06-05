@@ -294,6 +294,20 @@ namespace SocketLib::Utils {
             }
         }
 
+        template<typename F>
+        void invokeError(TArgs... args, F&& exceptionHandle) {
+            if (callbacks.empty()) return;
+            std::shared_lock<std::shared_mutex> lock(mutex);
+
+            for (auto &callback: callbacks) {
+                try {
+                    callback(args...);
+                } catch (std::exception const& e) {
+                    exceptionHandle(e);
+                }
+            }
+        }
+
         constexpr ThreadSafeEventCallback &operator+=(ThinVirtualLayer<void(void *, TArgs...)> callback) {
             addCallback(std::move(callback));
             return *this;

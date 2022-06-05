@@ -125,12 +125,14 @@ void Channel::readThreadLoop() {
                 Message message(receivedBuf, recv_bytes);
 
                 if (!socket.listenCallback.empty()) {
-                    socket.listenCallback.invoke(*this, message);
+                    socket.listenCallback.invokeError(*this, message, [&logToken, this](auto const& e) constexpr {
+                        getLogger().writeLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG, fmt::format("Exception caught in listener: {}", e.what()));
+                    });
                 }
             }
         }
-    } catch (std::exception &e) {
-        getLogger().writeLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG, fmt::format("Closing socket because it has crashed fatally while reading: {}", e.what()));
+    } catch (std::exception const& e) {
+        getLogger().fmtLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG, "Closing socket because it has crashed fatally while reading: {}", e.what());
         socket.disconnectInternal(clientDescriptor);
     } catch (...) {
         getLogger().writeLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG, "Closing socket because it has crashed fatally while reading for an unknown reason");

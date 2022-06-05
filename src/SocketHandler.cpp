@@ -69,15 +69,17 @@ void SocketLib::SocketHandler::threadLoop() {
         WorkT work;
         // TODO: Find a way to forcefully stop waiting for deque
 
-        if (workQueue.try_dequeue(consumerToken, work)) {
-            try {
-                work();
-            } catch (std::exception& e) {
-                logger.fmtLog<LoggerLevel::DEBUG_LEVEL>(logToken, SOCKET_HANDLER_LOG_TAG, "Caught exception in thread pool (treat this as an error): {}", e.what());
-                // TODO: Is this the best way to handle this?
-            }
-        } else {
+        if (!workQueue.try_dequeue(consumerToken, work)) {
             std::this_thread::yield();
+            continue;
+        }
+        try {
+            work();
+        } catch (std::exception &e) {
+            logger.fmtLog<LoggerLevel::DEBUG_LEVEL>(logToken, SOCKET_HANDLER_LOG_TAG,
+                                                    "Caught exception in thread pool (treat this as an error): {}",
+                                                    e.what());
+            // TODO: Is this the best way to handle this?
         }
     }
 }
