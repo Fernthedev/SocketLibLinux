@@ -86,7 +86,7 @@ Logger &Channel::getLogger() {
 void Channel::queueWrite(const Message &msg) {
     if (std::this_thread::get_id() == writeThread.get_id()) {
         // TODO: Immediately send only if queue empty? If not, queue up when there's work on the queue
-        sendData(msg);
+        sendMessage(msg);
     } else {
         writeQueue.enqueue(msg);
     }
@@ -151,7 +151,7 @@ void Channel::writeThreadLoop() {
 
             // TODO: Find a way to forcefully stop waiting for deque
             if (writeQueue.wait_dequeue_timed(writeConsumeToken, message, std::chrono::milliseconds(5))) {
-                sendData(message);
+                sendMessage(message);
             } else {
                 std::this_thread::yield();
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -167,27 +167,26 @@ void Channel::writeThreadLoop() {
     }
 }
 
-void Channel::sendData(const Message &message) {
+void Channel::sendMessage(const Message &message) {
+    sendBytes(message);
+}
+
+void Channel::sendBytes(std::span<const byte> bytes) {
     // Throw exception here?
     if (!active || !socket.isActive()) {
         getLogger().writeLog<LoggerLevel::WARN>(CHANNEL_LOG_TAG, "Sending data when socket isn't active, why?");
         return;
     }
 
-    long sent_bytes = send(clientDescriptor, message.data(), message.length(), 0);
+    long sent_bytes = send(clientDescriptor, bytes.data(), bytes.size(), 0);
     int err = errno;
 
     // Queue up remaining data
-    if (sent_bytes < message.length()) {
-        long startIndex = sent_bytes;
-
-        size_t length = message.length() - sent_bytes;
-        std::span<byte> remainingBytes(message.data() + startIndex, message.data() + startIndex + length);
-
-        sendData(Message(remainingBytes));
-    } else if (sent_bytes < 0) {
+    if (sent_bytes < 0) {
         socket.disconnectInternal(clientDescriptor);
         Utils::throwIfError<true>(getLogger(), err, CHANNEL_LOG_TAG);
+    } else if (sent_bytes < bytes.size()) {
+        sendBytes(bytes.subspan(sent_bytes));
     }
 }
 

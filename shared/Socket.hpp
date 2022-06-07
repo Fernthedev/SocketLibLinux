@@ -115,7 +115,8 @@ namespace SocketLib {
         moodycamel::BlockingConcurrentQueue<Message> writeQueue;
 
         Logger& getLogger();
-        void sendData(const Message& message);
+        void sendMessage(const Message& message);
+        void sendBytes(std::span<const byte> bytes);
 
         std::mutex deconstructMutex;
         moodycamel::ConsumerToken writeConsumeToken;
