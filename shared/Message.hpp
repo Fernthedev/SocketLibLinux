@@ -12,6 +12,18 @@ namespace SocketLib {
     using byte = unsigned char;
 
     struct Message {
+        
+        constexpr void init(size_t len) {
+            if (len == 0) {
+                _len = 0;
+                _data = nullptr;
+                return;
+            }
+
+            _len = len;
+            _data = new byte[len];
+        }
+
         constexpr void init(const byte* data, size_t len) {
             if (data == nullptr || len == 0) {
                 _len = 0;
@@ -23,6 +35,10 @@ namespace SocketLib {
             _data = new byte[len];
 
             memcpy(_data, data, len);
+        }
+
+        constexpr explicit Message(size_t len) {
+            init(len);
         }
 
         constexpr explicit Message(const byte* data, size_t len) {
