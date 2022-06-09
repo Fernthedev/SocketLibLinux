@@ -36,14 +36,18 @@ add_compile_definitions(FMT_HEADER_ONLY)
 RECURSE_FILES(cpp_file_list ${SOURCE_DIR}/*.cpp)
 RECURSE_FILES(c_file_list ${SOURCE_DIR}/*.c)
 
-RECURSE_FILES(test_cpp_file_list test/src/*.cpp)
+if (DEFINED BUILD_TEST)
+    message("Building tests")
+    RECURSE_FILES(test_cpp_file_list test/src/*.cpp)
+
+    SET(cpp_file_list ${cpp_file_list} ${test_cpp_file_list})
+endif()
 
 # add all src files to compile
 add_library(
         ${COMPILE_ID}
         SHARED
         ${cpp_file_list}
-        ${test_cpp_file_list}
         ${c_file_list}
 )
 

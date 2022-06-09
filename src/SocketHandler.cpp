@@ -91,6 +91,12 @@ void SocketLib::SocketHandler::queueWork(const WorkT& work) {
     workQueue.enqueue(work);
 }
 
+void SocketLib::SocketHandler::queueWork(WorkT&& work) {
+    validateActive();
+
+    workQueue.enqueue(std::move(work));
+}
+
 SocketLib::SocketHandler &SocketLib::SocketHandler::getCommonSocketHandler() {
     static SocketHandler socketHandler;
 

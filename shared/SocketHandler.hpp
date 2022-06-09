@@ -53,6 +53,8 @@ namespace SocketLib {
         /// Queues up work in the thread loop. Avoid calling this with code that locks
         /// \param work The work to be done in the thread loop
         void queueWork(const WorkT& work);
+        void queueWork(WorkT&& work);
+
 
         /// A common instance that can be used with multiple sockets.
         /// \return
