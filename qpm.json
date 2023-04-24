@@ -4,7 +4,7 @@
   "info": {
     "name": "SocketLib",
     "id": "socket_lib",
-    "version": "0.1.0",
+    "version": "0.8.2",
     "url": "https://github.com/Fernthedev/SocketLibLinux",
     "additionalData": {
       "overrideSoName": "libsocket_lib.so"
@@ -22,5 +22,5 @@
       "additionalData": {}
     }
   ],
-  "additionalData": {}
+  "workspace": null
 }
