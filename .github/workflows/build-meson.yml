@@ -70,14 +70,6 @@ jobs:
           ./QPM/qpm dependency remove paper
           ./QPM/qpm restore
 
-      - name: List Post Restore
-        run: |
-          echo includes:
-          ls -la ${GITHUB_WORKSPACE}/extern/includes
-          echo libs:
-          ls -la ${GITHUB_WORKSPACE}/extern/libs
-          echo cache:
-          ls -la $HOME/.local/share/qpm/cache
 
       - uses: BSFishy/meson-build@v1.0.1
         with:

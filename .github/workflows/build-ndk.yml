@@ -66,15 +66,6 @@ jobs:
         chmod +x ./QPM/qpm
         ./QPM/qpm restore
 
-    - name: List Post Restore
-      run: |
-        echo includes:
-        ls -la ${GITHUB_WORKSPACE}/extern/includes
-        echo libs:
-        ls -la ${GITHUB_WORKSPACE}/extern/libs
-        echo cache:
-        ls -la $HOME/.local/share/qpm/cache
-
     - name: Setup LLD
       run: |
         sudo apt install lld -y
