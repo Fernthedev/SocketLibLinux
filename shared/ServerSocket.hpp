@@ -64,5 +64,7 @@ namespace SocketLib {
 
         std::shared_mutex clientDescriptorsMutex;
         std::unordered_map<int, std::unique_ptr<Channel>> clientDescriptors;
+
+        void threadLoop();
     };
 }

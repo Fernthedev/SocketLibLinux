@@ -45,9 +45,10 @@ void SocketLib::ServerSocketTest::startTest() {
     // When using as a lib, realistically you won't do this
     while (serverSocket.isActive()) {
         std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
-    log(LoggerLevel::INFO, "Finished server test, awaiting for server shutdown");
+    log(LoggerLevel::INFO, "Finished server test, awaiting for server queueShutdown");
 
     // The destructor will remove the socket from the SocketHandler automatically.
     // You can use a smart pointer like unique pointer to handle this for you

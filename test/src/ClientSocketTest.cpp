@@ -66,7 +66,7 @@ void SocketLib::ClientSocketTest::startTest() {
         std::this_thread::yield();
     }
 
-    log(LoggerLevel::INFO, "Finished client test, awaiting for client shutdown");
+    log(LoggerLevel::INFO, "Finished client test, awaiting for client queueShutdown");
 
     // The destructor will remove the socket from the SocketHandler automatically.
     // You can use a smart pointer like unique pointer to handle this for you

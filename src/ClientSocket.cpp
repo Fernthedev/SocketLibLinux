@@ -32,7 +32,7 @@ void ClientSocket::connect() {
     }
 
     active = true;
-    channel = std::make_unique<Channel>(*this, socketDescriptor);
+    channel = std::make_unique<Channel>(*this, getLogger(), listenCallback, socketDescriptor);
 
     if (!connectCallback.empty()) {
         socketHandler->queueWork([this] {

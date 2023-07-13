@@ -92,7 +92,7 @@ namespace SocketLib {
         constexpr static const std::string_view CHANNEL_LOG_TAG = "channel";
         constexpr Channel() = delete;
 
-        explicit Channel(Socket& socket, int clientDescriptor);
+        explicit Channel(Socket const& socket, Logger& logger, ListenEventCallback& listenCallback, int clientDescriptor);
 
         ~Channel();
 
@@ -106,11 +106,16 @@ namespace SocketLib {
 
         const int clientDescriptor;
 
+        [[nodiscard]] bool isActive() const;
+
     private:
         bool active;
 
-        /// TODO: Should we add a getter for Socket? Should it be const?
-        Socket& socket;
+        Socket const& socket;
+
+        // Owned by socket, which owns Channel
+        Logger& logger;
+        ListenEventCallback& listenCallback;
 
         moodycamel::BlockingConcurrentQueue<Message> writeQueue;
 
@@ -120,6 +125,8 @@ namespace SocketLib {
 
         std::mutex deconstructMutex;
         moodycamel::ConsumerToken writeConsumeToken;
+
+        void queueShutdown();
     };
 
 }

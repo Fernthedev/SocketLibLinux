@@ -55,7 +55,7 @@ ServerSocket::~ServerSocket() {
     if (socketDescriptor != -1) {
         int status = shutdown(socketDescriptor, SHUT_RDWR);
 
-        Utils::logIfError(getLogger(), status, "Unable to shutdown", SERVER_LOG_TAG);
+        Utils::logIfError(getLogger(), status, "Unable to queueShutdown", SERVER_LOG_TAG);
         status = close(socketDescriptor);
 
         Utils::logIfError(getLogger(), status, "Unable to close", SERVER_LOG_TAG);
@@ -67,17 +67,16 @@ ServerSocket::~ServerSocket() {
 
 void ServerSocket::onConnectedClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
-    auto channel = std::make_unique<Channel>(*this, clientDescriptor);
+    auto channel = std::make_unique<Channel>(*this, getLogger(), listenCallback, clientDescriptor);
 
     auto* channelPtr = channel.get();
 
     clientDescriptors.emplace(clientDescriptor, std::move(channel));
 
-    if (!connectCallback.empty()) {
-        socketHandler->queueWork([channelPtr, this] {
-            connectCallback.invoke(*channelPtr, true);
-        });
-    }
+    if (connectCallback.empty()) return;
+    socketHandler->queueWork([channelPtr, this] {
+        connectCallback.invoke(*channelPtr, true);
+    });
 }
 
 void ServerSocket::write(int clientDescriptor, const Message& message) {
@@ -100,10 +99,6 @@ void ServerSocket::closeClient(int clientDescriptor) {
         serverErrorThrow("Client descriptor {} does not exist", clientDescriptor);
     }
 
-    serverLog(LoggerLevel::DEBUG_LEVEL, "Client being deleted: {}", it->first);
-    shutdown(clientDescriptor, SHUT_RDWR);
-    close(clientDescriptor);
-
     Channel &channel = *it->second.get();
     if (!connectCallback.empty()) {
         // TODO: Catch exceptions?
@@ -111,10 +106,13 @@ void ServerSocket::closeClient(int clientDescriptor) {
         connectCallback.invoke(channel, false);
     }
 
+    // Calls ~Channel()
     clientDescriptors.erase(it);
 
+    serverLog(LoggerLevel::DEBUG_LEVEL, "Client being deleted: {}", it->first);
+    shutdown(clientDescriptor, SHUT_RDWR);
+    close(clientDescriptor);
 
-    // TODO: Somehow validate that there are no memory leaks here?
     serverLog(LoggerLevel::DEBUG_LEVEL, "Fully finished clearing client data from server memory.");
 }
 
@@ -132,18 +130,39 @@ HostPort ServerSocket::getPeerAddress(int clientDescriptor) {
     return Utils::getHostByAddress(getLogger(), socketAddress);
 }
 
+// TODO: Replace with epoll
 void ServerSocket::connectionListenLoop() {
     while (isActive()) {
+        this->threadLoop();
+
         struct sockaddr_storage their_addr{};
         socklen_t addr_size = sizeof their_addr;
-        int new_fd = accept(socketDescriptor, (struct sockaddr *) &their_addr, &addr_size);
+        int new_fd = accept4(socketDescriptor, (struct sockaddr *) &their_addr, &addr_size, SOCK_NONBLOCK);
+
+        auto err = errno;
+
+        if (!isActive()) break;
 
         if (new_fd < 0) {
+            // non block handle
+            if (err == EWOULDBLOCK) {
+                std::this_thread::sleep_for(std::chrono::microseconds (100));
+                continue;
+            }
+
             Utils::logIfError(getLogger(), new_fd, "Failed to accept client", SERVER_LOG_TAG);
             continue;
-        } else {
-            onConnectedClient(new_fd);
         }
+
+        onConnectedClient(new_fd);
+    }
+}
+
+void ServerSocket::threadLoop() {
+    for (auto const& [id, socket] : this->clientDescriptors) {
+        if (socket->isActive()) continue;
+
+        closeClient(socket->clientDescriptor);
     }
 }
 
