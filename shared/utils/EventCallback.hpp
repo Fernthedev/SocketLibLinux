@@ -6,6 +6,8 @@
 #include <set>
 #include <functional>
 #include <shared_mutex>
+#include <memory>
+#include <mutex>
 
 namespace SocketLib {
     template<template<typename> typename Container, typename Item>
