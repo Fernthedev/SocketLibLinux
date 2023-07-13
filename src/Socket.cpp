@@ -178,15 +178,18 @@ void Channel::sendBytes(std::span<const byte> bytes) {
         return;
     }
 
-    long sent_bytes = send(clientDescriptor, bytes.data(), bytes.size(), 0);
-    int err = errno;
+    long sent_bytes = 0;
+    while (sent_bytes < bytes.size()) {
+        sent_bytes = send(clientDescriptor, bytes.data(), bytes.size(), 0);
+        int err = errno;
 
-    // Queue up remaining data
-    if (sent_bytes < 0) {
-        socket.disconnectInternal(clientDescriptor);
-        Utils::throwIfError<true>(getLogger(), err, CHANNEL_LOG_TAG);
-    } else if (sent_bytes < bytes.size()) {
-        sendBytes(bytes.subspan(sent_bytes));
+        // Queue up remaining data
+        if (sent_bytes < 0) {
+            socket.disconnectInternal(clientDescriptor);
+            Utils::throwIfError<true>(getLogger(), err, CHANNEL_LOG_TAG);
+        } else if (sent_bytes < bytes.size()) {
+            bytes.subspan(sent_bytes) = bytes.subspan(sent_bytes);
+        }
     }
 }
 
