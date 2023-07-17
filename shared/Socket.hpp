@@ -57,6 +57,7 @@ namespace SocketLib {
 
         // Socket settings
         uint32_t bufferSize = 512;
+        bool noDelay = false; // must be set before server is bind and listening
 
         /// Returns true if the destructor has been called at least once
         /// \return

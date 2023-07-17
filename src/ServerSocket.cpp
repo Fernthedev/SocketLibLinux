@@ -1,5 +1,7 @@
-#include <unistd.h>
 #include <iostream>
+#include <netinet/tcp.h>
+#include <unistd.h>
+
 
 #include "SocketUtil.hpp"
 #include "ServerSocket.hpp"
@@ -25,9 +27,16 @@ void ServerSocket::bindAndListen() {
 
     active = true;
 
-    int opt = 1;
+    int yes = 1;
     // Forcefully attaching socket to the port 8080
-    Utils::throwIfError(getLogger(), setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)), SERVER_LOG_TAG);
+    Utils::throwIfError(getLogger(), setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(yes)), SERVER_LOG_TAG);
+
+    if (noDelay) {
+        Utils::throwIfError(getLogger(),
+                            setsockopt(socketDescriptor, IPPROTO_TCP,
+                                       TCP_NODELAY, &yes, sizeof(yes)),
+                            SERVER_LOG_TAG);
+    }
 
     Utils::throwIfError(getLogger(), bind(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen), SERVER_LOG_TAG);
 

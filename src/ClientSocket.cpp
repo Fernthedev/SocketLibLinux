@@ -3,6 +3,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 
 #include "SocketUtil.hpp"
 #include "ClientSocket.hpp"
@@ -26,6 +27,14 @@ ClientSocket::ClientSocket(SocketHandler *socketHandler, uint32_t id, const std:
 
 
 void ClientSocket::connect() {
+    int yes = 1;
+    if (noDelay) {
+      Utils::throwIfError(getLogger(),
+                          setsockopt(socketDescriptor, IPPROTO_TCP, TCP_NODELAY,
+                                     &yes, sizeof(yes)),
+                          CLIENT_LOG_TAG);
+    }
+
     if (::connect(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen) == -1) {
         ::close(socketDescriptor);
         clientErrorThrow("Failed to connect");
