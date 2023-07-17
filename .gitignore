@@ -1,6 +1,12 @@
 builddir
 ndkpath.txt
 .idea/sonarlint
+node_modules/
+.cache/
+build/
+build-test/
+package-lock.json
+yarn.lock
 
 qpm_defines.cmake
 extern.cmake
