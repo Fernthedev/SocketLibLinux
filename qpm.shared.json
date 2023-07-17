@@ -1,0 +1,71 @@
+{
+  "config": {
+    "sharedDir": "shared",
+    "dependenciesDir": "extern",
+    "info": {
+      "name": "SocketLib",
+      "id": "socket_lib",
+      "version": "0.8.1",
+      "url": "https://github.com/Fernthedev/SocketLibLinux",
+      "additionalData": {
+        "overrideSoName": "libsocket_lib.so"
+      }
+    },
+    "dependencies": [
+      {
+        "id": "modloader",
+        "versionRange": "*",
+        "additionalData": {}
+      },
+      {
+        "id": "paper",
+        "versionRange": "^1.2.1",
+        "additionalData": {}
+      }
+    ],
+    "workspace": null
+  },
+  "restoredDependencies": [
+    {
+      "dependency": {
+        "id": "paper",
+        "versionRange": "=1.2.14",
+        "additionalData": {
+          "overrideSoName": "libpaperlog.so"
+        }
+      },
+      "version": "1.2.14"
+    },
+    {
+      "dependency": {
+        "id": "modloader",
+        "versionRange": "=1.2.3",
+        "additionalData": {
+          "soLink": "https://github.com/sc2ad/QuestLoader/releases/download/v1.2.3/libmodloader64.so",
+          "overrideSoName": "libmodloader.so",
+          "branchName": "version-v1.2.3"
+        }
+      },
+      "version": "1.2.3"
+    },
+    {
+      "dependency": {
+        "id": "fmt",
+        "versionRange": "=10.0.0",
+        "additionalData": {
+          "headersOnly": true,
+          "branchName": "version/v10_0_0",
+          "compileOptions": {
+            "systemIncludes": [
+              "fmt/include/"
+            ],
+            "cppFlags": [
+              "-DFMT_HEADER_ONLY"
+            ]
+          }
+        }
+      },
+      "version": "10.0.0"
+    }
+  ]
+}
