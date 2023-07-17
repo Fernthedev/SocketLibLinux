@@ -1,4 +1,4 @@
-import * as net from "net";
+import * as net from "node:net";
 
 var HOST = '0.0.0.0';
 var PORT = 3506;
