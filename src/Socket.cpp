@@ -11,6 +11,7 @@
 
 #include <span>
 #include <utility>
+#include <fcntl.h>
 
 using namespace SocketLib;
 
@@ -28,6 +29,12 @@ SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::option
             Utils::logIfError(getLogger(), socketDescriptor, "creating socket", SOCKET_LOG_TAG);
             continue;
         }
+
+        // Set socket to non-blocking mode
+        int flags = fcntl(socketDescriptor, F_GETFL, 0);
+        Utils::throwIfError(getLogger(),
+                            fcntl(socketDescriptor, F_SETFL, flags | O_NONBLOCK),
+                            SOCKET_LOG_TAG);
 
         servInfo = p;
 
@@ -97,11 +104,11 @@ void Channel::queueWrite(const Message &msg) {
 void Channel::readThreadLoop() {
     auto logToken = getLogger().createProducerToken();
     try {
-        while (socket.isActive() && active) {
+        while (isActive()) {
             auto bufferSize = socket.bufferSize;
             byte buf[bufferSize];
 
-            long recv_bytes = recv(clientDescriptor, buf, bufferSize, 0);
+            long recv_bytes = recv(clientDescriptor, buf, bufferSize, MSG_DONTWAIT);
 
             int err = errno;
 
@@ -109,19 +116,26 @@ void Channel::readThreadLoop() {
                 break;
             }
 
-            // Non blocking
-            if (recv_bytes == -1 && err == EWOULDBLOCK) {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
-                continue;
-            }
-
-            if (recv_bytes == 0 || err == ECONNRESET) {
+            // End of socket
+            if (recv_bytes == 0) {
                 this->queueShutdown();
                 break;
                 // Error
             }
 
+            // Non blocking
             if (recv_bytes < 0) {
+                // Connection reset
+                if (err == ECONNRESET) {
+                    this->queueShutdown();
+                    break;
+                }
+
+                if (err == EWOULDBLOCK) {
+                    std::this_thread::sleep_for(std::chrono::microseconds(100));
+                    continue;
+                }
+
                 this->queueShutdown();
                 Utils::throwIfError<true>(getLogger(), err, CHANNEL_LOG_TAG);
                 break;
@@ -161,7 +175,7 @@ void Channel::writeThreadLoop() {
             Message message(nullptr, 0);
 
             // TODO: Find a way to forcefully stop waiting for deque
-            if (writeQueue.wait_dequeue_timed(writeConsumeToken, message, std::chrono::milliseconds(5))) {
+            if (writeQueue.wait_dequeue_timed(writeConsumeToken, message, std::chrono::microseconds(500))) {
                 sendMessage(message);
                 continue;
             }
@@ -196,50 +210,56 @@ void Channel::sendBytes(std::span<const byte> bytes) {
     while (sent_bytes < bytes.size()) {
         if (!isActive()) break;
 
-        sent_bytes = send(clientDescriptor, bytes.data(), bytes.size(), 0);
+        sent_bytes = send(clientDescriptor, bytes.data(), bytes.size(), MSG_DONTWAIT);
         int err = errno;
 
         // Queue up remaining data
         if (sent_bytes < 0) {
+            if (err == EWOULDBLOCK) {
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
+                continue;
+            }
             this->queueShutdown();
             Utils::throwIfError<true>(getLogger(), err, CHANNEL_LOG_TAG);
             break;
         } else if (sent_bytes < bytes.size()) {
-            bytes.subspan(sent_bytes) = bytes.subspan(sent_bytes);
+            bytes = bytes.subspan(sent_bytes);
         }
     }
 }
 
 Channel::~Channel() {
+    if (!active) return;
     queueShutdown();
-    active = false;
 
-    if (!deconstructMutex.try_lock()) {
-        throw std::runtime_error("Channel is already being destroyed!");
-    }
-
-    std::lock_guard<std::mutex> lock2(deconstructMutex);
-
-    if (readThread.joinable()) {
-        getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Read ending");
-        readThread.detach();
-    }
-
-    if (writeThread.joinable()) {
-        getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Write ending");
-        writeThread.join();
-    }
-
-    getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Ending read write thread");
+    // Cleanup if necessary
+    awaitShutdown();
 }
 
 bool Channel::isActive() const {
-    return socket.isActive() && active;
+    return active && socket.isActive();
 }
 
 /// When the owning socket sees the active false bool, the channel will be deleted
 void Channel::queueShutdown() {
+    getLogger().fmtLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Queing shutdown for {}", socket.id);
     active = false;
+}
+
+void Channel::awaitShutdown() {
+    queueShutdown();
+
+    if (readThread.joinable()) {
+        getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Read detach");
+        readThread.detach();
+    }
+
+    if (writeThread.joinable()) {
+        getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Write wait end");
+        writeThread.join();
+    }
+
+    getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Ending read write thread");
 }
 
 

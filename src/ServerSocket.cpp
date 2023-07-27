@@ -29,7 +29,11 @@ void ServerSocket::bindAndListen() {
 
     int yes = 1;
     // Forcefully attaching socket to the port 8080
-    Utils::throwIfError(getLogger(), setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(yes)), SERVER_LOG_TAG);
+    Utils::throwIfError(getLogger(),
+                        setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_KEEPALIVE, &yes, sizeof(yes)),
+                        SERVER_LOG_TAG);
+
+//    O_NONBLOCK
 
     if (noDelay) {
         Utils::throwIfError(getLogger(),
@@ -53,8 +57,8 @@ void ServerSocket::bindAndListen() {
 
 ServerSocket::~ServerSocket() {
     serverLog(LoggerLevel::DEBUG_LEVEL, "Deleting server socket");
-    for (auto const& threadGroupPair : clientDescriptors) {
-        auto& channel = threadGroupPair.second;
+    for (auto const &threadGroupPair: clientDescriptors) {
+        auto &channel = threadGroupPair.second;
         closeClient(channel->clientDescriptor);
     }
 
@@ -78,7 +82,7 @@ void ServerSocket::onConnectedClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
     auto channel = std::make_unique<Channel>(*this, getLogger(), listenCallback, clientDescriptor);
 
-    auto* channelPtr = channel.get();
+    auto *channelPtr = channel.get();
 
     clientDescriptors.emplace(clientDescriptor, std::move(channel));
 
@@ -88,14 +92,14 @@ void ServerSocket::onConnectedClient(int clientDescriptor) {
     });
 }
 
-void ServerSocket::write(int clientDescriptor, const Message& message) {
+void ServerSocket::write(int clientDescriptor, const Message &message) {
     std::shared_lock<std::shared_mutex> readLock(clientDescriptorsMutex);
     auto it = clientDescriptors.find(clientDescriptor);
 
     if (it == clientDescriptors.end()) {
         serverErrorThrow("Client descriptor {} does not exist", clientDescriptor);
     }
-    auto& group = it->second;
+    auto &group = it->second;
 
     group->queueWrite(message);
 }
@@ -115,7 +119,11 @@ void ServerSocket::closeClient(int clientDescriptor) {
         connectCallback.invoke(channel, false);
     }
 
+    // wait for everything to flush
+    channel.awaitShutdown();
+
     // Calls ~Channel()
+    // We release because a move calls the destructor
     clientDescriptors.erase(it);
 
     serverLog(LoggerLevel::DEBUG_LEVEL, "Client being deleted: {}", it->first);
@@ -129,7 +137,8 @@ sockaddr_storage ServerSocket::getPeerName(int clientDescriptor) {
     struct sockaddr_storage their_addr{};
     socklen_t addr_size = sizeof their_addr;
 
-    Utils::throwIfError(getLogger(), getpeername(clientDescriptor, (struct sockaddr *)&their_addr, &addr_size), SERVER_LOG_TAG);
+    Utils::throwIfError(getLogger(), getpeername(clientDescriptor, (struct sockaddr *) &their_addr, &addr_size),
+                        SERVER_LOG_TAG);
 
     return their_addr;
 }
@@ -155,7 +164,7 @@ void ServerSocket::connectionListenLoop() {
         if (new_fd < 0) {
             // non block handle
             if (err == EWOULDBLOCK) {
-                std::this_thread::sleep_for(std::chrono::microseconds (100));
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
                 continue;
             }
 
@@ -168,8 +177,13 @@ void ServerSocket::connectionListenLoop() {
 }
 
 void ServerSocket::threadLoop() {
-    for (auto const& [id, socket] : this->clientDescriptors) {
-        if (socket->isActive()) continue;
+    for (auto it = this->clientDescriptors.begin(); it != this->clientDescriptors.end();) {
+        auto const &[id, socket] = *it;
+        it++;
+        // increment before destroying in closeClient
+        if (socket->isActive()) {
+            continue;
+        }
 
         closeClient(socket->clientDescriptor);
     }

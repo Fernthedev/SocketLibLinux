@@ -97,8 +97,7 @@ namespace SocketLib {
 
         ~Channel();
 
-        void readThreadLoop();
-        void writeThreadLoop();
+        void awaitShutdown();
 
         void queueWrite(const Message& msg);
 
@@ -123,6 +122,9 @@ namespace SocketLib {
         Logger& getLogger();
         void sendMessage(const Message& message);
         void sendBytes(std::span<const byte> bytes);
+
+        void readThreadLoop();
+        void writeThreadLoop();
 
         std::mutex deconstructMutex;
         moodycamel::ConsumerToken writeConsumeToken;

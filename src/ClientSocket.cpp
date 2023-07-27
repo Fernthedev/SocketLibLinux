@@ -20,7 +20,7 @@ using namespace SocketLib;
 ClientSocket::ClientSocket(SocketHandler *socketHandler, uint32_t id, const std::string &address, uint32_t port)
         : Socket(socketHandler, id, address, port) {
     char s[INET6_ADDRSTRLEN];
-    inet_ntop(servInfo->ai_family, Utils::get_in_addr((struct sockaddr *)servInfo->ai_addr), s, sizeof s);
+    inet_ntop(servInfo->ai_family, Utils::get_in_addr((struct sockaddr *) servInfo->ai_addr), s, sizeof s);
 
     clientLog(LoggerLevel::DEBUG_LEVEL, "Connecting to {}", s);
 }
@@ -29,15 +29,26 @@ ClientSocket::ClientSocket(SocketHandler *socketHandler, uint32_t id, const std:
 void ClientSocket::connect() {
     int yes = 1;
     if (noDelay) {
-      Utils::throwIfError(getLogger(),
-                          setsockopt(socketDescriptor, IPPROTO_TCP, TCP_NODELAY,
-                                     &yes, sizeof(yes)),
-                          CLIENT_LOG_TAG);
+        Utils::throwIfError(getLogger(),
+                            setsockopt(socketDescriptor, IPPROTO_TCP, TCP_NODELAY,
+                                       &yes, sizeof(yes)),
+                            CLIENT_LOG_TAG);
     }
 
-    if (::connect(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen) == -1) {
+    while (true) {
+        auto connectStatus = ::connect(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen);
+        auto err = errno;
+        if (connectStatus == 0) break;
+
+        // non block handle
+        if (err == EWOULDBLOCK) {
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            continue;
+        }
+
         ::close(socketDescriptor);
         clientErrorThrow("Failed to connect");
+        break;
     }
 
     active = true;
