@@ -57,13 +57,17 @@ void ServerSocket::bindAndListen() {
 
 ServerSocket::~ServerSocket() {
     serverLog(LoggerLevel::DEBUG_LEVEL, "Deleting server socket");
-    for (auto const &threadGroupPair: clientDescriptors) {
-        auto &channel = threadGroupPair.second;
-        closeClient(channel->clientDescriptor);
+    notifyStop();
+    for (auto it = clientDescriptors.begin(); it != clientDescriptors.end();) {
+        auto clientId = it->first;
+        // increment since closeClient removes from map
+        it++;
+
+        closeClient(clientId);
     }
 
     if (connectionListenThread.joinable())
-        connectionListenThread.detach();
+        connectionListenThread.join();
 
     if (socketDescriptor != -1) {
         int status = shutdown(socketDescriptor, SHUT_RDWR);
