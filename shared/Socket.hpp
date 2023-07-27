@@ -97,8 +97,10 @@ namespace SocketLib {
 
         ~Channel();
 
-        void awaitShutdown();
 
+
+        /// Will not send if message is empty or null
+        /// \param msg
         void queueWrite(const Message& msg);
 
         std::thread readThread;
@@ -123,6 +125,7 @@ namespace SocketLib {
         void sendMessage(const Message& message);
         void sendBytes(std::span<const byte> bytes);
 
+        void awaitShutdown();
         void readThreadLoop();
         void writeThreadLoop();
 

@@ -93,12 +93,17 @@ Logger &Channel::getLogger() {
 }
 
 void Channel::queueWrite(const Message &msg) {
-    if (std::this_thread::get_id() == writeThread.get_id()) {
-        // TODO: Immediately send only if queue empty? If not, queue up when there's work on the queue
-        sendMessage(msg);
-    } else {
-        writeQueue.enqueue(msg);
+    if (msg.data() == nullptr || msg.length() == 0) {
+        return;
     }
+    if (std::this_thread::get_id() != writeThread.get_id()) {
+        writeQueue.enqueue(msg);
+        return;
+    }
+
+
+    // TODO: Immediately send only if queue empty? If not, queue up when there's work on the queue
+    sendMessage(msg);
 }
 
 void Channel::readThreadLoop() {
@@ -132,7 +137,7 @@ void Channel::readThreadLoop() {
                 }
 
                 if (err == EWOULDBLOCK) {
-                    std::this_thread::sleep_for(std::chrono::microseconds(100));
+                    std::this_thread::sleep_for(std::chrono::microseconds(500));
                     continue;
                 }
 
@@ -171,17 +176,23 @@ void Channel::writeThreadLoop() {
     auto logToken = getLogger().createProducerToken();
 
     try {
-        while (socket.isActive() && active) {
-            Message message(nullptr, 0);
 
-            // TODO: Find a way to forcefully stop waiting for deque
-            if (writeQueue.wait_dequeue_timed(writeConsumeToken, message, std::chrono::microseconds(500))) {
-                sendMessage(message);
+        auto constexpr messageReserve = 10;
+        Message messages[messageReserve];
+
+        while (socket.isActive() && active) {
+
+            auto dequeCount = writeQueue.wait_dequeue_bulk_timed(writeConsumeToken, messages, messageReserve,
+                                                                 std::chrono::milliseconds(500));
+            if (dequeCount == 0) {
+                std::this_thread::yield();
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
                 continue;
             }
 
-            std::this_thread::yield();
-            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            for (size_t i = 0; i < dequeCount; i++) {
+                sendMessage(messages[i]);
+            }
         }
     } catch (std::exception const &e) {
         getLogger().fmtLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG,
@@ -251,7 +262,7 @@ void Channel::awaitShutdown() {
 
     if (readThread.joinable()) {
         getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Read detach");
-        readThread.detach();
+        readThread.join();
     }
 
     if (writeThread.joinable()) {

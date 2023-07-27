@@ -30,7 +30,8 @@ void ServerSocket::bindAndListen() {
     int yes = 1;
     // Forcefully attaching socket to the port 8080
     Utils::throwIfError(getLogger(),
-                        setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_KEEPALIVE, &yes, sizeof(yes)),
+                        setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT | SO_KEEPALIVE, &yes,
+                                   sizeof(yes)),
                         SERVER_LOG_TAG);
 
 //    O_NONBLOCK
@@ -124,9 +125,10 @@ void ServerSocket::closeClient(int clientDescriptor) {
     }
 
     // wait for everything to flush
-    channel.awaitShutdown();
+    //    channel.awaitShutdown();
 
     // Calls ~Channel()
+    // will wait for everything to close
     // We release because a move calls the destructor
     clientDescriptors.erase(it);
 
@@ -168,7 +170,8 @@ void ServerSocket::connectionListenLoop() {
         if (new_fd < 0) {
             // non block handle
             if (err == EWOULDBLOCK) {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
                 continue;
             }
 

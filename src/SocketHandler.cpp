@@ -3,7 +3,7 @@
 
 using namespace SocketLib;
 
-ServerSocket* SocketLib::SocketHandler::createServerSocket(uint32_t port) {
+ServerSocket *SocketLib::SocketHandler::createServerSocket(uint32_t port) {
     validateActive();
 
     std::unique_lock<std::shared_mutex> lock(socketMutex);
@@ -14,7 +14,7 @@ ServerSocket* SocketLib::SocketHandler::createServerSocket(uint32_t port) {
     return static_cast<ServerSocket *>(sockets.emplace(id, std::move(socket)).first->second.get());
 }
 
-ClientSocket *SocketHandler::createClientSocket(std::string const& address, uint32_t port) {
+ClientSocket *SocketHandler::createClientSocket(std::string const &address, uint32_t port) {
     validateActive();
 
     std::unique_lock<std::shared_mutex> lock(socketMutex);
@@ -40,7 +40,7 @@ void SocketLib::SocketHandler::destroySocket(uint32_t id) {
 
     if (it != sockets.end()) {
         std::unique_lock<std::shared_mutex> lock(socketMutex);
-        auto& socket = it->second;
+        auto &socket = it->second;
         sockets.erase(it);
         nextId = id;
     }
@@ -50,48 +50,65 @@ void SocketHandler::handleLogThread() {
 #ifndef SOCKETLIB_PAPER_LOG
     moodycamel::ConsumerToken consumerToken(logger.logQueue);
 
+    auto constexpr taskCount = 20;
+    Logger::LogTask logTasks[taskCount];
+
     while (active) {
-        Logger::LogTask task;
-        if (!logger.logQueue.try_dequeue(consumerToken, task)) {
+        auto dequeCount = logger.logQueue.wait_dequeue_bulk_timed(consumerToken, logTasks, taskCount, std::chrono::milliseconds(100));
+        if (dequeCount == 0) {
             std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
 
-        logger.loggerCallback.invoke(task.level, task.tag, task.log);
+        for (size_t i = 0; i < dequeCount; i++) {
+            auto const& task = logTasks[i];
+            logger.loggerCallback.invoke(task.level, task.tag, task.log);
+        }
     }
 #endif
 }
 
 void SocketLib::SocketHandler::threadLoop() {
     moodycamel::ConsumerToken consumerToken(workQueue);
-    auto logToken = logger.createProducerToken();
+    auto const logToken = logger.createProducerToken();
+    WorkT works[SOCKET_LIB_MAX_QUEUE_SIZE];
+
     while (active) {
-        WorkT work;
         // TODO: Find a way to forcefully stop waiting for deque
 
-        if (!workQueue.try_dequeue(consumerToken, work)) {
+        auto dequeCount = workQueue.wait_dequeue_bulk_timed(consumerToken, works, SOCKET_LIB_MAX_QUEUE_SIZE,
+                                                            std::chrono::milliseconds(300));
+
+        if (dequeCount == 0) {
             std::this_thread::yield();
-            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
-        try {
-            work();
-        } catch (std::exception &e) {
-            logger.fmtLog<LoggerLevel::DEBUG_LEVEL>(logToken, SOCKET_HANDLER_LOG_TAG,
-                                                    "Caught exception in thread pool (treat this as an error): {}",
-                                                    e.what());
-            // TODO: Is this the best way to handle this?
+
+        for (size_t i = 0; i < dequeCount; i++) {
+            auto const &work = works[i];
+            if (!work) continue;
+            try {
+                work();
+            } catch (std::exception &e) {
+                logger.fmtLog<LoggerLevel::ERROR>(logToken, SOCKET_HANDLER_LOG_TAG,
+                                                  "Caught exception in thread pool (treat this as an error): {}",
+                                                  e.what());
+                // TODO: Is this the best way to handle this?
+            }
         }
     }
 }
 
-void SocketLib::SocketHandler::queueWork(const WorkT& work) {
+void SocketLib::SocketHandler::queueWork(const WorkT &work) {
+    if (!work) return;
     validateActive();
 
     workQueue.enqueue(work);
 }
 
-void SocketLib::SocketHandler::queueWork(WorkT&& work) {
+void SocketLib::SocketHandler::queueWork(WorkT &&work) {
     validateActive();
 
     workQueue.enqueue(std::move(work));
@@ -106,7 +123,7 @@ SocketLib::SocketHandler &SocketLib::SocketHandler::getCommonSocketHandler() {
 SocketHandler::~SocketHandler() {
     active = false;
     std::unique_lock<std::shared_mutex> lock(socketMutex);
-    for (auto& threads : threadPool) {
+    for (auto &threads: threadPool) {
         threads.join();
     }
 

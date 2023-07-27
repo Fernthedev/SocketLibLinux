@@ -12,7 +12,10 @@ namespace SocketLib {
     using byte = unsigned char;
 
     struct Message {
-        
+
+        // Please avoid
+        explicit Message() = default;
+
         constexpr void init(size_t len) {
             if (len == 0) {
                 _len = 0;

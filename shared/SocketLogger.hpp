@@ -101,18 +101,18 @@ namespace SocketLib {
         // producer stuff
 #pragma region producer
         template<LoggerLevel lvl, typename... TArgs>
-        constexpr void fmtLog(moodycamel::ProducerToken& producer, std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+        constexpr void fmtLog(moodycamel::ProducerToken const& producer, std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
             writeLog<lvl>(producer, tag, fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
         }
 
         template<typename Exception = std::runtime_error, typename... TArgs>
-        inline void fmtThrowError(moodycamel::ProducerToken& producer, std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+        inline void fmtThrowError(moodycamel::ProducerToken const& producer, std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
             fmtLog<LoggerLevel::ERROR, TArgs...>(producer, tag, str, std::forward<TArgs>(args)...);
             throw Exception(fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
         }
 
         template<LoggerLevel lvl>
-        constexpr void writeLog(moodycamel::ProducerToken& token, std::string_view const tag, std::string_view const log) {
+        constexpr void writeLog(moodycamel::ProducerToken const& token, std::string_view const tag, std::string_view const log) {
             if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
                 if (!DebugEnabled) return;
             }
@@ -123,9 +123,11 @@ namespace SocketLib {
 #endif
         }
 
-        inline void queueLogInternal(moodycamel::ProducerToken& producer, LoggerLevel level, std::string_view tag, std::string_view log) {
+        inline void queueLogInternal(moodycamel::ProducerToken const& producer, LoggerLevel level, std::string_view tag, std::string_view log) {
 #ifndef SOCKETLIB_PAPER_LOG
-            while(!logQueue.enqueue(producer, {level, tag, log}));
+            while(!logQueue.enqueue(producer, {level, tag, log})) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
 #endif
         }
 #pragma endregion

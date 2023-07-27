@@ -12,6 +12,8 @@
 #include <queue>
 #include <exception>
 
+#define SOCKET_LIB_MAX_QUEUE_SIZE 40
+
 namespace SocketLib {
     using WorkT = std::function<void()>;
 
