@@ -21,10 +21,6 @@ void ServerSocket::bindAndListen() {
         serverErrorThrow("Already running server!");
     }
 
-    if (destroyed) {
-        serverErrorThrow("Server already destroyed");
-    }
-
     active = true;
 
     int yes = 1;
