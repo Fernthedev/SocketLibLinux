@@ -240,7 +240,6 @@ void Channel::sendBytes(std::span<const byte> bytes) {
 }
 
 Channel::~Channel() {
-    if (!active) return;
     queueShutdown();
 
     // Cleanup if necessary
