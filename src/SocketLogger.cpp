@@ -5,7 +5,7 @@
 
 using namespace SocketLib;
 
-void setup() {
+inline void setup() {
     static bool setup;
     if (setup) return;
 
@@ -15,6 +15,7 @@ void setup() {
 
 void Logger::queueLogInternal(const moodycamel::ProducerToken &producer, LoggerLevel level, std::string_view tag,
                               std::string_view log) {
+    setup();
 #ifdef SOCKETLIB_PAPER_LOG
 #warning Using paper logger
     __android_log_print(static_cast<int>(level), "SocketLib", "[%s] %s", tag.data(), log.data());
@@ -28,6 +29,8 @@ void Logger::queueLogInternal(const moodycamel::ProducerToken &producer, LoggerL
 }
 
 void Logger::queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log) {
+    setup();
+
 #ifdef SOCKETLIB_PAPER_LOG
 #warning Using paper logger
     __android_log_print(static_cast<int>(level), "SocketLib", "[%s] %s", tag.data(), log.data());
