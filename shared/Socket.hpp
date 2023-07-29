@@ -92,6 +92,7 @@ namespace SocketLib {
     public:
         constexpr static const std::string_view CHANNEL_LOG_TAG = "channel";
         constexpr Channel() = delete;
+        constexpr Channel(Channel const&) = delete;
 
         explicit Channel(Socket const& socket, Logger& logger, ListenEventCallback& listenCallback, int clientDescriptor);
 

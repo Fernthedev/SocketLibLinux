@@ -32,7 +32,9 @@ SocketLib::SocketHandler::SocketHandler(int maxThreads) : active(true) {
         threadPool.emplace_back(&SocketHandler::threadLoop, this);
     }
 
+#ifndef SOCKETLIB_PAPER_LOG
     loggerThread = std::thread(&SocketHandler::handleLogThread, this);
+#endif
 }
 
 void SocketLib::SocketHandler::destroySocket(uint32_t id) {
@@ -123,12 +125,16 @@ SocketLib::SocketHandler &SocketLib::SocketHandler::getCommonSocketHandler() {
 SocketHandler::~SocketHandler() {
     active = false;
     std::unique_lock<std::shared_mutex> lock(socketMutex);
-    for (auto &threads: threadPool) {
-        threads.join();
+    for (auto &thread: threadPool) {
+        if (!thread.joinable()) continue;
+
+        thread.join();
     }
 
     threadPool.clear();
-    loggerThread.detach();
+    if (loggerThread.joinable()) {
+        loggerThread.detach();
+    }
     sockets.clear();
 }
 

@@ -37,14 +37,11 @@ namespace SocketLib {
         ERROR = 6
     };
 
-#ifdef SOCKETLIB_PAPER_LOG
-    static inline auto PaperLogger = Paper::Logger::WithContext<"SocketLib", false>();
-#endif
-
     class Logger {
     public:
         Logger() = default;
-        Logger(Logger const&) = delete;
+
+        Logger(Logger const &) = delete;
 
         static constexpr std::string_view loggerLevelToStr(LoggerLevel level) {
             switch (level) {
@@ -62,15 +59,15 @@ namespace SocketLib {
         }
 
         bool DebugEnabled;
-        Utils::UnorderedEventCallback<LoggerLevel, std::string const&, std::string const&> loggerCallback;
+        Utils::UnorderedEventCallback<LoggerLevel, std::string const &, std::string const &> loggerCallback;
 
         template<LoggerLevel lvl, typename... TArgs>
-        constexpr void fmtLog(std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+        constexpr void fmtLog(std::string_view tag, fmt::format_string<TArgs...> str, TArgs &&... args) {
             writeLog<lvl>(tag, fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
         }
 
         template<typename Exception = std::runtime_error, typename... TArgs>
-        inline void fmtThrowError(std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+        inline void fmtThrowError(std::string_view tag, fmt::format_string<TArgs...> str, TArgs &&... args) {
             fmtLog<LoggerLevel::ERROR, TArgs...>(tag, str, std::forward<TArgs>(args)...);
             throw Exception(fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
         }
@@ -82,17 +79,13 @@ namespace SocketLib {
             }
 
 #ifdef SOCKETLIB_PAPER_LOG
-            Paper::Logger::vfmtLog<(Paper::LogLevel) lvl>("[{}] {}", Paper::sl::current("","", 0, 0), PaperLogger.tag, fmt::make_format_args(tag, log));
+            Paper::Logger::fmtLogTag<(Paper::LogLevel) lvl>("[{}] {}", "SocketLib", tag, log);
 #else
             queueLogInternal(lvl, tag, log);
 #endif
         }
 
-        inline void queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log) {
-#ifndef SOCKETLIB_PAPER_LOG
-            logQueue.enqueue({level, tag, log});
-#endif
-        }
+        static void queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log);
 
         [[nodiscard]] moodycamel::ProducerToken createProducerToken() {
             return moodycamel::ProducerToken(logQueue);
@@ -100,36 +93,34 @@ namespace SocketLib {
 
         // producer stuff
 #pragma region producer
+
         template<LoggerLevel lvl, typename... TArgs>
-        constexpr void fmtLog(moodycamel::ProducerToken const& producer, std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+        constexpr void
+        fmtLog(moodycamel::ProducerToken const &producer, std::string_view tag, fmt::format_string<TArgs...> str,
+               TArgs &&... args) {
             writeLog<lvl>(producer, tag, fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
         }
 
         template<typename Exception = std::runtime_error, typename... TArgs>
-        inline void fmtThrowError(moodycamel::ProducerToken const& producer, std::string_view tag, fmt::format_string<TArgs...> str, TArgs&&... args) {
+        inline void
+        fmtThrowError(moodycamel::ProducerToken const &producer, std::string_view tag, fmt::format_string<TArgs...> str,
+                      TArgs &&... args) {
             fmtLog<LoggerLevel::ERROR, TArgs...>(producer, tag, str, std::forward<TArgs>(args)...);
             throw Exception(fmt::format<TArgs...>(str, std::forward<TArgs>(args)...));
         }
 
         template<LoggerLevel lvl>
-        constexpr void writeLog(moodycamel::ProducerToken const& token, std::string_view const tag, std::string_view const log) {
+        constexpr void
+        writeLog(moodycamel::ProducerToken const &token, std::string_view const tag, std::string_view const log) {
             if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
                 if (!DebugEnabled) return;
             }
-#ifdef SOCKETLIB_PAPER_LOG
-            Paper::Logger::vfmtLog<(Paper::LogLevel) lvl>("[{}] {}", Paper::sl::current("","", 0, 0), PaperLogger.tag, fmt::make_format_args(tag, log));
-#else
             queueLogInternal(token, lvl, tag, log);
-#endif
         }
 
-        inline void queueLogInternal(moodycamel::ProducerToken const& producer, LoggerLevel level, std::string_view tag, std::string_view log) {
-#ifndef SOCKETLIB_PAPER_LOG
-            while(!logQueue.enqueue(producer, {level, tag, log})) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-#endif
-        }
+        static void queueLogInternal(moodycamel::ProducerToken const &producer, LoggerLevel level, std::string_view tag,
+                                     std::string_view log);
+
 #pragma endregion
 
     private:
@@ -139,8 +130,9 @@ namespace SocketLib {
             std::string log;
 
             LogTask() = default;
+
             LogTask(LoggerLevel level, std::string_view tag, std::string_view log) : level(level), tag(tag),
-                                                                                         log(log) {}
+                                                                                     log(log) {}
         };
 
         moodycamel::BlockingConcurrentQueue<LogTask> logQueue;

@@ -87,9 +87,7 @@ void ServerSocket::onConnectedClient(int clientDescriptor) {
     std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
     auto channel = std::make_unique<Channel>(*this, getLogger(), listenCallback, clientDescriptor);
 
-    auto *channelPtr = channel.get();
-
-    clientDescriptors.emplace(clientDescriptor, std::move(channel));
+    auto channelPtr = clientDescriptors.emplace(clientDescriptor, std::move(channel)).first->second.get();
 
     if (connectCallback.empty()) return;
     socketHandler->queueWork([channelPtr, this] {
@@ -117,7 +115,7 @@ void ServerSocket::closeClient(int clientDescriptor) {
         serverErrorThrow("Client descriptor {} does not exist", clientDescriptor);
     }
 
-    Channel &channel = *it->second.get();
+    Channel &channel = *it->second;
     if (!connectCallback.empty()) {
         // TODO: Catch exceptions?
         // TODO: Should we even use reference types here?
