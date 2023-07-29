@@ -6,7 +6,9 @@
 // Use paper log if possible
 #if __has_include("paper/shared/logger.hpp")
 #define SOCKETLIB_PAPER_LOG
+
 #include "paper/shared/logger.hpp"
+
 #endif
 
 #if defined(QUEST) && !defined(SOCKETLIB_PAPER_LOG)
@@ -75,14 +77,12 @@ namespace SocketLib {
         template<LoggerLevel lvl>
         constexpr void writeLog(std::string_view const tag, std::string_view const log) {
             if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
-                if (!DebugEnabled) return;
+                if (!DebugEnabled) {
+                    return;
+                }
             }
 
-#ifdef SOCKETLIB_PAPER_LOG
-            Paper::Logger::fmtLogTag<(Paper::LogLevel) lvl>("[{}] {}", "SocketLib", tag, log);
-#else
             queueLogInternal(lvl, tag, log);
-#endif
         }
 
         static void queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log);
@@ -113,7 +113,9 @@ namespace SocketLib {
         constexpr void
         writeLog(moodycamel::ProducerToken const &token, std::string_view const tag, std::string_view const log) {
             if constexpr (lvl == LoggerLevel::DEBUG_LEVEL) {
-                if (!DebugEnabled) return;
+                if (!DebugEnabled) {
+                    return;
+                }
             }
             queueLogInternal(token, lvl, tag, log);
         }
