@@ -38,6 +38,7 @@ namespace SocketLib {
         virtual ~Socket(); // call through SocketHandler
 
         // No copying socket
+        constexpr Socket(Socket&&) = delete;
         constexpr Socket(const Socket&) = delete;
         constexpr Socket& operator=(const Socket&) = delete;
 
@@ -59,10 +60,6 @@ namespace SocketLib {
         uint32_t bufferSize = 512;
         bool noDelay = false; // must be set before server is bind and listening
 
-        /// Returns true if the destructor has been called at least once
-        /// \return
-        [[nodiscard]] bool isDestroyed() const;
-
         /// The socket handler managing this socket
         /// TODO: Should we even have this or pass it manually where it's needed?
         [[nodiscard]] SocketHandler* getSocketHandler() const;
@@ -75,7 +72,6 @@ namespace SocketLib {
         SocketHandler* socketHandler;
 
         bool active = false;
-        bool destroyed = false;
 
         struct addrinfo *servInfo;
         const std::optional<std::string> host;

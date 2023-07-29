@@ -46,13 +46,9 @@ SocketLib::Socket::Socket(SocketHandler *socketHandler, uint32_t id, std::option
 
 SocketLib::Socket::~Socket() {
     getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(SOCKET_LOG_TAG, "Destroy!");
-    if (!destroyed) {
-        destroyed = true;
-
-        if (servInfo) {
-            freeaddrinfo(servInfo);
-            servInfo = nullptr;
-        }
+    if (servInfo != nullptr) {
+        freeaddrinfo(servInfo);
+        servInfo = nullptr;
     }
 }
 
@@ -63,10 +59,6 @@ bool Socket::isActive() const {
 
 void Socket::notifyStop() {
     active = false;
-}
-
-bool Socket::isDestroyed() const {
-    return destroyed;
 }
 
 SocketHandler *Socket::getSocketHandler() const {
@@ -219,7 +211,9 @@ void Channel::sendBytes(std::span<const byte> bytes) {
 
     long sent_bytes = 0;
     while (sent_bytes < bytes.size()) {
-        if (!isActive()) break;
+        if (!isActive()) {
+            break;
+        }
 
         sent_bytes = send(clientDescriptor, bytes.data(), bytes.size(), MSG_DONTWAIT);
         int err = errno;
@@ -233,7 +227,8 @@ void Channel::sendBytes(std::span<const byte> bytes) {
             this->queueShutdown();
             Utils::throwIfError<true>(getLogger(), err, CHANNEL_LOG_TAG);
             break;
-        } else if (sent_bytes < bytes.size()) {
+        }
+        if (sent_bytes < bytes.size()) {
             bytes = bytes.subspan(sent_bytes);
         }
     }
