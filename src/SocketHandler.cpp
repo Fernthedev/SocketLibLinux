@@ -8,7 +8,7 @@ ServerSocket *SocketLib::SocketHandler::createServerSocket(uint32_t port) {
 
     std::unique_lock<std::shared_mutex> lock(socketMutex);
     uint32_t id = nextId;
-    nextId = sockets.size();
+    nextId++;
     auto socket = std::make_unique<ServerSocket>(this, id, port);
 
     return static_cast<ServerSocket *>(sockets.emplace(id, std::move(socket)).first->second.get());
