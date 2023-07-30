@@ -85,7 +85,7 @@ namespace SocketLib {
             queueLogInternal(lvl, tag, log);
         }
 
-        static void queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log);
+        void queueLogInternal(LoggerLevel level, std::string_view tag, std::string_view log);
 
         [[nodiscard]] moodycamel::ProducerToken createProducerToken() {
             return moodycamel::ProducerToken(logQueue);
@@ -120,7 +120,7 @@ namespace SocketLib {
             queueLogInternal(token, lvl, tag, log);
         }
 
-        static void queueLogInternal(moodycamel::ProducerToken const &producer, LoggerLevel level, std::string_view tag,
+        void queueLogInternal(moodycamel::ProducerToken const &producer, LoggerLevel level, std::string_view tag,
                                      std::string_view log);
 
 #pragma endregion
