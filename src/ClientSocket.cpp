@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include <iostream>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -38,7 +37,9 @@ void ClientSocket::connect() {
     while (true) {
         auto connectStatus = ::connect(socketDescriptor, servInfo->ai_addr, servInfo->ai_addrlen);
         auto err = errno;
-        if (connectStatus == 0) break;
+        if (connectStatus == 0) {
+            break;
+        }
 
         // non block handle
         if (err == EWOULDBLOCK) {
@@ -54,11 +55,12 @@ void ClientSocket::connect() {
     active = true;
     channel = std::make_unique<Channel>(*this, getLogger(), listenCallback, socketDescriptor);
 
-    if (!connectCallback.empty()) {
-        socketHandler->queueWork([this] {
-            connectCallback.invoke(*channel, true);
-        });
+    if (connectCallback.empty()) {
+        return;
     }
+    std::thread([this] {
+        connectCallback.invoke(*channel, true);
+    }).detach();
 }
 
 ClientSocket::~ClientSocket() {
@@ -94,4 +96,35 @@ void ClientSocket::close() {
     clientLog(LoggerLevel::DEBUG_LEVEL, "Closed client socket");
 
     // TODO: Somehow validate that there are no memory leaks here?
+}
+
+void ClientSocket::readLoop() {
+    byte buf[bufferSize];
+    std::span byteSpan(buf, bufferSize);
+
+    auto logToken = this->getLogger().createProducerToken();
+    while (isActive()) {
+        auto sleepTime = std::chrono::microseconds(500);
+
+        bool foundReadableChannel = channel->readData(byteSpan, logToken);
+
+        if (!foundReadableChannel) {
+            std::this_thread::yield();
+            std::this_thread::sleep_for(sleepTime);
+        }
+    }
+}
+
+void ClientSocket::writeLoop() {
+    auto logToken = this->getLogger().createProducerToken();
+    while (isActive()) {
+        auto sleepTime = std::chrono::microseconds(500);
+
+        bool foundReadableChannel = channel->handleWriteQueue(logToken);
+
+        if (!foundReadableChannel) {
+            std::this_thread::yield();
+            std::this_thread::sleep_for(sleepTime);
+        }
+    }
 }

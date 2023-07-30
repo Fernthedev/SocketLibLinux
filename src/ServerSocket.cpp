@@ -49,6 +49,11 @@ void ServerSocket::bindAndListen() {
 //        Utils::throwIfError(status);
 //    }
     Utils::throwIfError(getLogger(), listen(socketDescriptor, SOCKET_SERVER_BACKLOG), SERVER_LOG_TAG);
+
+    for (int i = 0; i < std::max(workerThreadCount, (uint16_t) 1); i++) {
+        workerThreads.emplace_back(&ServerSocket::readLoop, this);
+        workerThreads.emplace_back(&ServerSocket::writeLoop, this);
+    }
 }
 
 
@@ -63,8 +68,15 @@ ServerSocket::~ServerSocket() {
         closeClient(clientId);
     }
 
-    if (connectionListenThread.joinable())
+    if (connectionListenThread.joinable()) {
         connectionListenThread.join();
+    }
+
+    for (auto &t: workerThreads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
 
     if (socketDescriptor != -1) {
         int status = shutdown(socketDescriptor, SHUT_RDWR);
@@ -80,19 +92,23 @@ ServerSocket::~ServerSocket() {
 }
 
 void ServerSocket::onConnectedClient(int clientDescriptor) {
-    std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
+    std::unique_lock writeLock(clientDescriptorsMutex);
     auto channel = std::make_unique<Channel>(*this, getLogger(), listenCallback, clientDescriptor);
 
-    auto channelPtr = clientDescriptors.emplace(clientDescriptor, std::move(channel)).first->second.get();
+    auto *channelPtr = clientDescriptors.emplace(clientDescriptor, std::move(channel)).first->second.get();
+    writeLock.unlock();
 
-    if (connectCallback.empty()) return;
-    socketHandler->queueWork([channelPtr, this] {
+    if (connectCallback.empty()) {
+        return;
+    }
+
+    std::thread([channelPtr, this] {
         connectCallback.invoke(*channelPtr, true);
-    });
+    }).detach();
 }
 
 void ServerSocket::write(int clientDescriptor, const Message &message) {
-    std::shared_lock<std::shared_mutex> readLock(clientDescriptorsMutex);
+    std::shared_lock readLock(clientDescriptorsMutex);
     auto it = clientDescriptors.find(clientDescriptor);
 
     if (it == clientDescriptors.end()) {
@@ -104,29 +120,33 @@ void ServerSocket::write(int clientDescriptor, const Message &message) {
 }
 
 void ServerSocket::closeClient(int clientDescriptor) {
-    std::unique_lock<std::shared_mutex> writeLock(clientDescriptorsMutex);
+    std::unique_lock writeLock(clientDescriptorsMutex);
     auto it = clientDescriptors.find(clientDescriptor);
 
     if (it == clientDescriptors.end()) {
         serverErrorThrow("Client descriptor {} does not exist", clientDescriptor);
+        return;
     }
 
-    Channel &channel = *it->second;
+    // Move to this scope
+    // Erase from map to avoid threads from reading it
+    //    channelWrapper = std::move(clientDescriptors.erase(it)->second);
+    // sadly no work :(
+    std::unique_ptr<Channel> channelWrapper;
+    it->second.swap(channelWrapper);
+    clientDescriptors.erase(it);
+    writeLock.unlock();
+
+    Channel &channel = *channelWrapper;
     if (!connectCallback.empty()) {
         // TODO: Catch exceptions?
         // TODO: Should we even use reference types here?
         connectCallback.invoke(channel, false);
     }
 
-    // wait for everything to flush
-    //    channel.awaitShutdown();
-
     // Calls ~Channel()
     // will wait for everything to close
     // We release because a move calls the destructor
-    clientDescriptors.erase(it);
-
-    serverLog(LoggerLevel::DEBUG_LEVEL, "Client being deleted: {}", it->first);
     shutdown(clientDescriptor, SHUT_RDWR);
     close(clientDescriptor);
 
@@ -159,7 +179,9 @@ void ServerSocket::connectionListenLoop() {
 
         auto err = errno;
 
-        if (!isActive()) break;
+        if (!isActive()) {
+            break;
+        }
 
         if (new_fd < 0) {
             // non block handle
@@ -187,6 +209,67 @@ void ServerSocket::threadLoop() {
         }
 
         closeClient(socket->clientDescriptor);
+    }
+}
+
+void ServerSocket::writeLoop() {
+    byte buf[bufferSize];
+    std::span byteSpan(buf, bufferSize);
+
+    auto logToken = this->getLogger().createProducerToken();
+    while (isActive()) {
+        auto sleepTime = std::chrono::milliseconds(std::max(this->clientDescriptors.size() * 10, (std::size_t) 100));
+        bool foundWritableChannel = false;
+
+        {
+            std::shared_lock readLock(clientDescriptorsMutex);
+            for (auto it = this->clientDescriptors.begin(); it != this->clientDescriptors.end();) {
+                auto &channel = it->second;
+                it++;
+                if (!channel->isActive()) {
+                    continue;
+                }
+
+                foundWritableChannel |= channel->handleWriteQueue(logToken);
+            }
+        }
+
+        if (!foundWritableChannel) {
+            std::this_thread::yield();
+            std::this_thread::sleep_for(sleepTime);
+        }
+    }
+}
+
+void ServerSocket::readLoop() {
+    byte buf[bufferSize];
+    std::span byteSpan(buf, bufferSize);
+
+    auto logToken = this->getLogger().createProducerToken();
+    while (isActive()) {
+        auto sleepTime = std::chrono::microseconds(std::max(this->clientDescriptors.size() * 50, (std::size_t) 500));
+
+        bool foundReadableChannel = false;
+
+        {
+            std::shared_lock readLock(clientDescriptorsMutex);
+            for (auto it = this->clientDescriptors.begin(); it != this->clientDescriptors.end();) {
+                auto &channel = it->second;
+                it++;
+                if (!channel->isActive()) {
+                    continue;
+                }
+
+
+                foundReadableChannel |= channel->readData(byteSpan, logToken);
+            }
+        }
+
+
+        if (!foundReadableChannel) {
+            std::this_thread::yield();
+            std::this_thread::sleep_for(sleepTime);
+        }
     }
 }
 
