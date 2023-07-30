@@ -101,10 +101,10 @@ void Channel::queueWrite(const Message &msg) {
 void Channel::readThreadLoop() {
     auto logToken = getLogger().createProducerToken();
     try {
-        while (isActive()) {
-            auto bufferSize = socket.bufferSize;
-            byte buf[bufferSize];
+        auto bufferSize = socket.bufferSize;
+        byte buf[bufferSize];
 
+        while (isActive()) {
             long recv_bytes = recv(clientDescriptor, buf, bufferSize, MSG_DONTWAIT);
 
             int err = errno;

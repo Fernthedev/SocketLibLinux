@@ -111,6 +111,9 @@ void SocketLib::SocketHandler::queueWork(const WorkT &work) {
 }
 
 void SocketLib::SocketHandler::queueWork(WorkT &&work) {
+    if (!work) {
+        return;
+    }
     validateActive();
 
     workQueue.enqueue(std::move(work));
@@ -126,7 +129,9 @@ SocketHandler::~SocketHandler() {
     active = false;
     std::unique_lock<std::shared_mutex> lock(socketMutex);
     for (auto &thread: threadPool) {
-        if (!thread.joinable()) continue;
+        if (!thread.joinable()) {
+            continue;
+        }
 
         thread.join();
     }
