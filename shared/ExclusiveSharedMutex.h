@@ -12,11 +12,6 @@
 /// Essentially, if a thread wants exclusive access
 /// no other thread will manage to get shared access
 
-#include <iostream>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
-
 class ExclusivePrioritySharedMutex
 {
 public:
@@ -31,7 +26,7 @@ public:
 
         // Slow path: exclusive lock is requested or taken, or contention for shared access
         std::unique_lock<std::mutex> lock(mutex_);
-        sharedCv_.wait(lock, [this]() { return exclusiveRequests_.load(std::memory_order_acquire) == 0; });
+        sharedCv_.wait(lock, [this]() { return exclusiveRequests_.load(std::memory_order_acquire) == 0 && exclusiveCount_.load(std::memory_order_acquire) == 0; });
         sharedCount_.fetch_add(1, std::memory_order_acquire);
     }
 
@@ -49,6 +44,7 @@ public:
             {
                 sharedCv_.notify_one();
             }
+//            exclusiveCv_.notify_one();
         }
     }
 
@@ -57,14 +53,16 @@ public:
         exclusiveRequests_.fetch_add(1, std::memory_order_acquire);
 
         std::unique_lock<std::mutex> lock(mutex_);
-        exclusiveCv_.wait(lock, [this]() { return sharedCount_.load(std::memory_order_acquire) == 0; });
+        exclusiveCv_.wait(lock, [this]() { return sharedCount_.load(std::memory_order_acquire) == 0 && exclusiveCount_.load(std::memory_order_acquire) == 0; });
         exclusiveRequests_.fetch_sub(1, std::memory_order_release);
+        exclusiveCount_.fetch_add(1, std::memory_order_acquire);
     }
 
     void unlock()
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (exclusiveWaiting_.fetch_sub(1, std::memory_order_release) > 1)
+        exclusiveCount_.fetch_sub(1, std::memory_order_release);
+        if (exclusiveWaiting_.load(std::memory_order_acquire) > 0)
         {
             exclusiveCv_.notify_one();
         }
@@ -78,11 +76,13 @@ private:
     std::atomic_int sharedCount_ = 0;          // Count of threads holding shared access
     std::atomic_int exclusiveRequests_ = 0;    // Count of threads requesting exclusive access
     std::atomic_int exclusiveWaiting_ = 0;     // Count of threads waiting for exclusive access
+    std::atomic_int exclusiveCount_ = 0;       // Count of threads holding exclusive access
 
     std::mutex mutex_;               // For coordinating access to internal variables
     std::condition_variable sharedCv_;  // For signaling shared access
     std::condition_variable exclusiveCv_; // For signaling exclusive access
 };
+
 
 
 //
