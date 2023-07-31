@@ -6,6 +6,10 @@
 
 #include "SocketLogger.hpp"
 
+#ifdef PROFILE_BUILD
+#include <gperftools/profiler.h>
+#endif
+
 #include <iostream>
 #include <exception>
 
@@ -17,7 +21,9 @@ int main(int argc, char *argv[]) {
 //#ifdef __GNUC__
 //    std::set_terminate(__gnu_cxx::__verbose_terminate_handler);
 //#endif
-
+#ifdef PROFILE_BUILD
+    ProfilerStart("SocketLibMain.prof"); // Start profiling
+#endif
 
     try {
         std::span<char*> args(argv, argc);
@@ -29,6 +35,10 @@ int main(int argc, char *argv[]) {
         std::cout << "Test failed due to: " << e.what() << std::endl;
         return -1;
     }
+
+#ifdef PROFILE_BUILD
+    ProfilerStop(); // Stop profiling
+#endif
 }
 
 void handleLog(LoggerLevel level, std::string_view const tag, std::string_view const log) {
