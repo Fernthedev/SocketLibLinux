@@ -218,7 +218,7 @@ void ServerSocket::writeLoop() {
 
     auto logToken = this->getLogger().createProducerToken();
     while (isActive()) {
-        auto sleepTime = std::chrono::milliseconds(std::max(this->clientDescriptors.size() * 10, (std::size_t) 100));
+        auto sleepTime = std::chrono::microseconds(std::max(this->clientDescriptors.size() * 50, (std::size_t) 500));
         bool foundWritableChannel = false;
 
         {

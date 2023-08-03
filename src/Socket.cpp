@@ -178,6 +178,9 @@ bool Channel::handleWriteQueue(moodycamel::ProducerToken const &logToken) {
         return false;
     }
 
+    // TODO: Should be done?
+    if (writeQueue.size_approx() == 0) return false;
+
     // don't lock since try_lock already locked
     std::unique_lock lock(writeLock, std::try_to_lock);
 
