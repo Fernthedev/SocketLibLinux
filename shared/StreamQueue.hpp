@@ -77,6 +77,10 @@ namespace SocketLib {
             return {bytes.cbegin(), bytes.cbegin() + countToDequeue};
         }
 
+        [[nodiscard]] std::size_t queueSize() const {
+            return bytes.size();
+        }
+
 
     protected:
         std::deque<uint8_t> bytes;
