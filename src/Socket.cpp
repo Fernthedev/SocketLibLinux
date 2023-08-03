@@ -191,7 +191,7 @@ bool Channel::handleWriteQueue(moodycamel::ProducerToken const &logToken) {
 
 
         auto dequeCount = writeQueue.wait_dequeue_bulk_timed(writeConsumeToken, messages, messageReserve,
-                                                             std::chrono::microseconds (500));
+                                                             std::chrono::microseconds (100));
         if (dequeCount == 0) {
             return false;
         }
