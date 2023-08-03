@@ -52,7 +52,7 @@ namespace SocketLib {
         constexpr explicit Message(std::span<byte> data) {
             init(data.data(), data.size());
         }
-        constexpr explicit Message(std::vector<byte> data) {
+        explicit Message(std::vector<byte> data) {
             init(data.data(), data.size());
         }
 
