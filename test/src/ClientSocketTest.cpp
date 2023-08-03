@@ -39,8 +39,8 @@ void SocketLib::ClientSocketTest::startTest() {
         connectEvent(client, connected);
     };
 
-    clientSocket.listenCallback += [this](Channel& client, const Message& message){
-        listenOnEvents(client, message);
+    clientSocket.listenCallback += [this](Channel& client, SocketLib::ReadOnlyStreamQueue& incomingQueue){
+        listenOnEvents(client, incomingQueue);
     };
 
     log(LoggerLevel::INFO, "Listening client fully started up");
@@ -73,9 +73,9 @@ void SocketLib::ClientSocketTest::startTest() {
     socketHandler.destroySocket(this->clientSocket);
 }
 
-void ClientSocketTest::listenOnEvents(Channel& client, const Message &message) const {
-    auto msgStr = message.toString();
-    log(LoggerLevel::INFO, "Received: {}", msgStr);
+void ClientSocketTest::listenOnEvents(Channel& client, SocketLib::ReadOnlyStreamQueue& incomingQueue) const {
+    auto msgStr = incomingQueue.dequeAsMessage().toString();
+    log(LoggerLevel::INFO, "Received: {}", msgStr.substr(0, msgStr.length() - 1));
 
     if (msgStr.find("stop") != std::string::npos) {
         log(LoggerLevel::INFO, "Stopping client now!");
@@ -88,7 +88,7 @@ void ClientSocketTest::listenOnEvents(Channel& client, const Message &message) c
     }
 
     // Construct message
-    Message constructedMessage(fmt::format("Client {}: {}\n", client.clientDescriptor, msgStr));
+    Message constructedMessage(fmt::format("Client {}: {}", client.clientDescriptor, msgStr));
 
     // Forward message to other clients if any
     clientSocket->write(constructedMessage);

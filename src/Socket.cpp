@@ -146,10 +146,11 @@ bool Channel::readData(std::span<byte> byteBuf, moodycamel::ProducerToken const 
 
         // Success
         // offset 0 len recv_bytes
-        Message message(byteBuf.subspan(0, recv_bytes));
+
+        incomingQueue.enqueueMove(byteBuf.subspan(0, recv_bytes));
 
         if (!listenCallback.empty()) {
-            listenCallback.invokeError(*this, message, [&logToken, this](auto const &e) constexpr {
+            listenCallback.invokeError(*this, incomingQueue, [&logToken, this](auto const &e) constexpr {
                 getLogger().writeLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG,
                                                          fmt::format("Exception caught in listener: {}",
                                                                      e.what()));

@@ -4,6 +4,7 @@
 #include <cstring>
 #include <string>
 #include <span>
+#include <vector>
 
 // Heavily inspired from https://github.com/shuai132/SocketPP/blob/7741e80603b3a7ee06ee7ebbc74488935f2de41c/socketpp/RawMsg.h
 // Please don't mind, good library inspiration
@@ -49,6 +50,9 @@ namespace SocketLib {
         }
 
         constexpr explicit Message(std::span<byte> data) {
+            init(data.data(), data.size());
+        }
+        constexpr explicit Message(std::vector<byte> data) {
             init(data.data(), data.size());
         }
 
@@ -102,8 +106,12 @@ namespace SocketLib {
             return _len;
         }
 
-        [[nodiscard]] std::string_view toString() const {
+        [[nodiscard]] std::string_view toStringView() const {
             return {(char*) _data, _len};
+        }
+
+        [[nodiscard]] std::string toString() const {
+            return std::string(toStringView());
         }
 
         [[nodiscard]] std::span<const byte> toSpan() const {

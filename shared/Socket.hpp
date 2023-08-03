@@ -13,6 +13,7 @@
 
 #include "queue/blockingconcurrentqueue.h"
 #include "utils/EventCallback.hpp"
+#include "StreamQueue.hpp"
 
 #include "Message.hpp"
 
@@ -25,10 +26,10 @@ namespace SocketLib {
 
     // int is client descriptor, true if connect, false disconnected
     using ConnectCallbackFunc = std::function<void(Channel&, bool)>;
-    using ListenCallbackFunc = std::function<void(Channel&, const Message&)>;
+    using ListenCallbackFunc = std::function<void(Channel&)>;
 
     using ConnectEventCallback = Utils::EventCallback<Channel&, bool>;
-    using ListenEventCallback = Utils::EventCallback<Channel&, const Message&>;
+    using ListenEventCallback = Utils::EventCallback<Channel&, ReadOnlyStreamQueue&>;
 
 
     class Socket {
@@ -123,6 +124,8 @@ namespace SocketLib {
 
         std::mutex readLock;
         std::mutex writeLock;
+
+        StreamQueue incomingQueue;
 
         Socket const& socket;
 

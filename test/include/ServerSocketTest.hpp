@@ -10,7 +10,7 @@ namespace SocketLib {
 
         void startTest();
         void connectEvent(SocketLib::Channel& channel, bool connected) const;
-        void listenOnEvents(SocketLib::Channel& clientDescriptor, const Message& message) const;
+        void listenOnEvents(SocketLib::Channel& clientDescriptor, SocketLib::ReadOnlyStreamQueue& incomingQueue) const;
 
         ServerSocket* serverSocket;
     };
