@@ -176,12 +176,13 @@ bool Channel::handleWriteQueue(moodycamel::ProducerToken const &logToken) {
     if (!active) {
         return false;
     }
-    if (!writeLock.try_lock()) {
-        return false;
-    }
 
     // don't lock since try_lock already locked
-    std::lock_guard lock(writeLock, std::adopt_lock);
+    std::unique_lock lock(writeLock, std::try_to_lock);
+
+    if (!lock) {
+        return false;
+    }
 
     try {
         auto constexpr messageReserve = 10;
@@ -189,7 +190,7 @@ bool Channel::handleWriteQueue(moodycamel::ProducerToken const &logToken) {
 
 
         auto dequeCount = writeQueue.wait_dequeue_bulk_timed(writeConsumeToken, messages, messageReserve,
-                                                             std::chrono::milliseconds(10));
+                                                             std::chrono::microseconds (500));
         if (dequeCount == 0) {
             return false;
         }
@@ -236,7 +237,7 @@ void Channel::sendBytes(std::span<const byte> bytes) {
         // Queue up remaining data
         if (sent_bytes < 0) {
             if (err == EWOULDBLOCK) {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
                 continue;
             }
             this->queueShutdown();
