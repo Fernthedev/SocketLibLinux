@@ -23,7 +23,13 @@
         "additionalData": {}
       }
     ],
-    "workspace": null
+    "workspace": {
+      "scripts": {
+        "build": [
+          "pwsh ./build.ps1"
+        ]
+      }
+    }
   },
   "restoredDependencies": [
     {
