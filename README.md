@@ -1,7 +1,6 @@
 # SocketLib for Linux (designed for Quest)
 
-This is a fully asynchronous library for sockets, made because _**some people**_ (cough, you know who you are, cough) were making custom web HTTP servers which is in my opinion absurd.
-
+This is a fully asynchronous library for sockets.
 # Features:
 - Makes use of [BlockConcurrentQueue](https://github.com/cameron314/concurrentqueue) which can be accessed in `queue` of the shared folder
 - Very lightweight and simple (though spaghetti code needs fixing)
