@@ -60,7 +60,6 @@ jobs:
       - name: Build
         run: |
           cd ${GITHUB_WORKSPACE}
-          qpm-rust restore
           qpm-rust s build
           qpm-rust qmod build
 
