@@ -1,4 +1,6 @@
-#ifdef QUEST
+#ifdef QUEST_TEST
+#warning Quest test setup!
+
 #include "main.hpp"
 #include "mainquest.hpp"
 #include <thread>

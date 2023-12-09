@@ -3,6 +3,8 @@
 using namespace SocketLib;
 #ifdef SOCKETLIB_PAPER_LOG
 
+#warning Using paper logger
+
 inline void setup() {
   static bool setup;
   if (setup) {
@@ -20,7 +22,6 @@ void Logger::queueLogInternal(const moodycamel::ProducerToken &producer,
                               std::string_view log) {
 #ifdef SOCKETLIB_PAPER_LOG
   setup();
-#warning Using paper logger
   Paper::Logger::vfmtLog<Paper::LogLevel::INF>(
       "[{}] {}", Paper::sl::current("", "", 0, 0), "SocketLib",
       fmt::make_format_args(tag, log));
@@ -35,7 +36,6 @@ void Logger::queueLogInternal(LoggerLevel level, std::string_view tag,
                               std::string_view log) {
 
 #ifdef SOCKETLIB_PAPER_LOG
-#warning Using paper logger
   setup();
   Paper::Logger::vfmtLog<Paper::LogLevel::INF>(
       "[{}] {}", Paper::sl::current("", "", 0, 0), "SocketLib",

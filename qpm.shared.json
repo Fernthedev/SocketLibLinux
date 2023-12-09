@@ -1,5 +1,6 @@
 {
   "config": {
+    "version": "0.2.0",
     "sharedDir": "shared",
     "dependenciesDir": "extern",
     "info": {
@@ -20,11 +21,6 @@
       }
     },
     "dependencies": [
-      {
-        "id": "modloader",
-        "versionRange": "*",
-        "additionalData": {}
-      },
       {
         "id": "paper",
         "versionRange": "<1.3.0",
@@ -51,18 +47,6 @@
         }
       },
       "version": "1.2.20"
-    },
-    {
-      "dependency": {
-        "id": "modloader",
-        "versionRange": "=1.2.3",
-        "additionalData": {
-          "soLink": "https://github.com/sc2ad/QuestLoader/releases/download/v1.2.3/libmodloader64.so",
-          "overrideSoName": "libmodloader.so",
-          "branchName": "version-v1.2.3"
-        }
-      },
-      "version": "1.2.3"
     },
     {
       "dependency": {
