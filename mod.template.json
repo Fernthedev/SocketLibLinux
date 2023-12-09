@@ -2,7 +2,7 @@
   "_QPVersion": "0.1.1",
   "name": "SocketLib",
   "id": "${mod_id}",
-  "modloader": null,
+  "modloader": "QuestLoader",
   "author": "Fernthedev",
   "version": "${version}",
   "description": "${mod_id}, version ${version}!",
