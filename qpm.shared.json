@@ -11,6 +11,13 @@
         "overrideSoName": "libsocket_lib.so"
       }
     },
+    "workspace": {
+      "scripts": {
+        "build": [
+          "pwsh ./build.ps1"
+        ]
+      }
+    },
     "dependencies": [
       {
         "id": "modloader",
@@ -35,7 +42,7 @@
     {
       "dependency": {
         "id": "paper",
-        "versionRange": "=1.2.14",
+        "versionRange": "=1.2.16",
         "additionalData": {
           "soLink": "https://github.com/Fernthedev/paperlog/releases/download/v1.2.14/libpaperlog.so",
           "debugSoLink": "https://github.com/Fernthedev/paperlog/releases/download/v1.2.14/debug_libpaperlog.so",
@@ -44,7 +51,7 @@
           "branchName": "version/v1_2_14"
         }
       },
-      "version": "1.2.14"
+      "version": "1.2.16"
     },
     {
       "dependency": {

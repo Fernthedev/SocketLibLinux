@@ -37,6 +37,11 @@ else()
     message("Building for Quest without Quest defines")
 endif()
 
+if(DEFINED PROFILE)
+    add_compile_options(-pg -lprofiler)
+    add_compile_definitions(PROFILE) # disable debug logs
+endif()
+
 add_compile_definitions(FMT_HEADER_ONLY)
 
 # recursively get all src files

@@ -8,5 +8,12 @@
         </build>
       </configuration>
     </target>
+    <target id="2bf64372-4ee1-4ba5-ba10-f5bf9381817c" name="Meosn WSL" defaultType="TOOL">
+      <configuration id="352d1583-836c-442d-9f32-ab7c78b3c34b" name="Meosn WSL">
+        <build type="TOOL">
+          <tool actionId="Tool_External Tools_Meson WSL" />
+        </build>
+      </configuration>
+    </target>
   </component>
 </project>

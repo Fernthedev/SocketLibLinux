@@ -1,8 +1,15 @@
 <toolSet name="External Tools">
   <tool name="Meson" showInMainMenu="false" showInEditor="false" showInProject="false" showInSearchPopup="false" disabled="false" useConsole="true" showConsoleOnStdOut="false" showConsoleOnStdErr="false" synchronizeAfterRun="true">
     <exec>
-      <option name="COMMAND" value="\usr\bin\meson" />
+      <option name="COMMAND" value="meson" />
       <option name="PARAMETERS" value="compile" />
+      <option name="WORKING_DIRECTORY" value="$ProjectFileDir$/builddir" />
+    </exec>
+  </tool>
+  <tool name="Meson WSL" showInMainMenu="false" showInEditor="false" showInProject="false" showInSearchPopup="false" disabled="false" useConsole="true" showConsoleOnStdOut="false" showConsoleOnStdErr="false" synchronizeAfterRun="true">
+    <exec>
+      <option name="COMMAND" value="wsl " />
+      <option name="PARAMETERS" value="meson compile" />
       <option name="WORKING_DIRECTORY" value="$ProjectFileDir$/builddir" />
     </exec>
   </tool>

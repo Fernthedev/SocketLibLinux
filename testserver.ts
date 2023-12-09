@@ -1,7 +1,7 @@
 import * as net from "node:net";
 
-var HOST = '0.0.0.0';
-var PORT = 3506;
+const HOST = '0.0.0.0';
+const PORT = 3506;
 
 net.createServer((sock) => {
     console.log('CONNECTED: ' + sock.remoteAddress +':'+ sock.remotePort);

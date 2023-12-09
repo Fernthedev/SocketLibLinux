@@ -10,6 +10,13 @@
       "overrideSoName": "libsocket_lib.so"
     }
   },
+  "workspace": {
+    "scripts": {
+      "build": [
+        "pwsh ./build.ps1"
+      ]
+    }
+  },
   "dependencies": [
     {
       "id": "modloader",
