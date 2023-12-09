@@ -26,12 +26,7 @@ ClientSocket *SocketHandler::createClientSocket(std::string const &address, uint
 }
 
 
-SocketLib::SocketHandler::SocketHandler(int maxThreads) : active(true) {
-    threadPool.reserve(maxThreads);
-    for (int i = 0; i < maxThreads; i++) {
-        threadPool.emplace_back(&SocketHandler::threadLoop, this);
-    }
-
+SocketLib::SocketHandler::SocketHandler() : active(true) {
 #ifndef SOCKETLIB_PAPER_LOG
     loggerThread = std::thread(&SocketHandler::handleLogThread, this);
 #endif
@@ -71,53 +66,7 @@ void SocketHandler::handleLogThread() {
 #endif
 }
 
-void SocketLib::SocketHandler::threadLoop() {
-    moodycamel::ConsumerToken consumerToken(workQueue);
-    auto const logToken = logger.createProducerToken();
-    WorkT works[SOCKET_LIB_MAX_QUEUE_SIZE];
 
-    while (active) {
-        // TODO: Find a way to forcefully stop waiting for deque
-
-        auto dequeCount = workQueue.wait_dequeue_bulk_timed(consumerToken, works, SOCKET_LIB_MAX_QUEUE_SIZE,
-                                                            std::chrono::milliseconds(300));
-
-        if (dequeCount == 0) {
-            std::this_thread::yield();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            continue;
-        }
-
-        for (size_t i = 0; i < dequeCount; i++) {
-            auto const &work = works[i];
-            if (!work) continue;
-            try {
-                work();
-            } catch (std::exception &e) {
-                logger.fmtLog<LoggerLevel::ERROR>(logToken, SOCKET_HANDLER_LOG_TAG,
-                                                  "Caught exception in thread pool (treat this as an error): {}",
-                                                  e.what());
-                // TODO: Is this the best way to handle this?
-            }
-        }
-    }
-}
-
-void SocketLib::SocketHandler::queueWork(const WorkT &work) {
-    if (!work) return;
-    validateActive();
-
-    workQueue.enqueue(work);
-}
-
-void SocketLib::SocketHandler::queueWork(WorkT &&work) {
-    if (!work) {
-        return;
-    }
-    validateActive();
-
-    workQueue.enqueue(std::move(work));
-}
 
 SocketLib::SocketHandler &SocketLib::SocketHandler::getCommonSocketHandler() {
     static SocketHandler socketHandler;
@@ -128,15 +77,7 @@ SocketLib::SocketHandler &SocketLib::SocketHandler::getCommonSocketHandler() {
 SocketHandler::~SocketHandler() {
     active = false;
     std::unique_lock<std::shared_mutex> lock(socketMutex);
-    for (auto &thread: threadPool) {
-        if (!thread.joinable()) {
-            continue;
-        }
 
-        thread.join();
-    }
-
-    threadPool.clear();
     if (loggerThread.joinable()) {
         loggerThread.detach();
     }

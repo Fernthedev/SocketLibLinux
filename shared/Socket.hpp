@@ -13,6 +13,7 @@
 
 #include "queue/blockingconcurrentqueue.h"
 #include "utils/EventCallback.hpp"
+#include "StreamQueue.hpp"
 
 #include "Message.hpp"
 
@@ -25,10 +26,10 @@ namespace SocketLib {
 
     // int is client descriptor, true if connect, false disconnected
     using ConnectCallbackFunc = std::function<void(Channel&, bool)>;
-    using ListenCallbackFunc = std::function<void(Channel&, const Message&)>;
+    using ListenCallbackFunc = std::function<void(Channel&)>;
 
     using ConnectEventCallback = Utils::EventCallback<Channel&, bool>;
-    using ListenEventCallback = Utils::EventCallback<Channel&, const Message&>;
+    using ListenEventCallback = Utils::EventCallback<Channel&, ReadOnlyStreamQueue&>;
 
 
     class Socket {
@@ -100,15 +101,31 @@ namespace SocketLib {
         /// \param msg
         void queueWrite(const Message& msg);
 
-        std::thread readThread;
-        std::thread writeThread;
+
 
         const int clientDescriptor;
 
         [[nodiscard]] bool isActive() const;
 
+        /// return false if no data
+        /// or failure
+        [[nodiscard]]
+        bool readData(std::span<byte> byteBuf, moodycamel::ProducerToken const& token);
+
+        /// return false if no data
+        /// or failure
+        [[nodiscard]]
+        bool handleWriteQueue(moodycamel::ProducerToken const& logToken);
+
     private:
         bool active;
+        std::thread readThread;
+        std::thread writeThread;
+
+        std::mutex readLock;
+        std::mutex writeLock;
+
+        StreamQueue incomingQueue;
 
         Socket const& socket;
 
@@ -123,8 +140,8 @@ namespace SocketLib {
         void sendBytes(std::span<const byte> bytes);
 
         void awaitShutdown();
-        void readThreadLoop();
-        void writeThreadLoop();
+
+
 
         std::mutex deconstructMutex;
         moodycamel::ConsumerToken writeConsumeToken;

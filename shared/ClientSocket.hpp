@@ -31,6 +31,9 @@ namespace SocketLib {
         void close();
 
     protected:
+        void writeLoop();
+        void readLoop();
+
         void disconnectInternal(int clientDescriptor) override {
             close();
         }

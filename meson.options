@@ -1,0 +1,2 @@
+# Define the profiling option with a default value of false
+option('enable_profiling', type: 'boolean', value: false, description: 'Enable profiling')

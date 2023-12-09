@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Meson build" type="CLionExternalRunConfiguration" factoryName="Application" PROGRAM_PARAMS="wsl meson compile" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="true" WORKING_DIR="file://$PROJECT_DIR$/builddir" PASS_PARENT_ENVS_2="true" PROJECT_NAME="SocketLibMain" TARGET_NAME="Meosn WSL" CONFIG_NAME="Meosn WSL" RUN_PATH="$PROJECT_DIR$/builddir/SocketLibMain">
+    <method v="2" />
+  </configuration>
+</component>

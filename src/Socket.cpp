@@ -76,8 +76,6 @@ Channel::Channel(Socket const &socket, Logger &logger, ListenEventCallback &list
         logger(logger),
         listenCallback(listenCallback),
         writeConsumeToken(writeQueue) {
-    this->writeThread = std::thread(&Channel::writeThreadLoop, this);
-    this->readThread = std::thread(&Channel::readThreadLoop, this);
 }
 
 Logger &Channel::getLogger() {
@@ -85,6 +83,10 @@ Logger &Channel::getLogger() {
 }
 
 void Channel::queueWrite(const Message &msg) {
+    if (!active) {
+        return;
+    }
+
     if (msg.data() == nullptr || msg.length() == 0) {
         return;
     }
@@ -98,58 +100,65 @@ void Channel::queueWrite(const Message &msg) {
     sendMessage(msg);
 }
 
-void Channel::readThreadLoop() {
-    auto logToken = getLogger().createProducerToken();
+bool Channel::readData(std::span<byte> byteBuf, moodycamel::ProducerToken const &logToken) {
+    if (!active) {
+        return false;
+    }
+    if (!readLock.try_lock()) {
+        return false;
+    }
+
+    // don't lock since try_lock already locked
+    std::lock_guard lock(readLock, std::adopt_lock);
     try {
-        auto bufferSize = socket.bufferSize;
-        byte buf[bufferSize];
+        long recv_bytes = recv(clientDescriptor, byteBuf.data(), byteBuf.size(), MSG_DONTWAIT);
 
-        while (isActive()) {
-            long recv_bytes = recv(clientDescriptor, buf, bufferSize, MSG_DONTWAIT);
+        int err = errno;
 
-            int err = errno;
-
-            if (!isActive()) {
-                break;
-            }
-
-            // End of socket
-            if (recv_bytes == 0) {
-                this->queueShutdown();
-                break;
-                // Error
-            }
-
-            // Non blocking
-            if (recv_bytes < 0) {
-                // Connection reset
-                if (err == ECONNRESET) {
-                    this->queueShutdown();
-                    break;
-                }
-
-                if (err == EWOULDBLOCK) {
-                    std::this_thread::sleep_for(std::chrono::microseconds(500));
-                    continue;
-                }
-
-                this->queueShutdown();
-                Utils::throwIfError<true>(getLogger(), err, CHANNEL_LOG_TAG);
-                break;
-                // Queue up remaining data
-            }
-
-            // Success
-            Message message(buf, recv_bytes);
-
-            if (!listenCallback.empty()) {
-                listenCallback.invokeError(*this, message, [&logToken, this](auto const &e) constexpr {
-                    getLogger().writeLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG,
-                                                             fmt::format("Exception caught in listener: {}",
-                                                                         e.what()));
-                });
-            }
+        if (!isActive()) {
+            return false;
         }
+
+        // End of socket
+        if (recv_bytes == 0) {
+            this->queueShutdown();
+            return false;
+            // Error
+        }
+
+        // Non blocking
+        if (recv_bytes < 0) {
+            // Connection reset
+            if (err == ECONNRESET) {
+                this->queueShutdown();
+                return false;
+            }
+
+            if (err == EWOULDBLOCK) {
+                return false;
+            }
+
+            this->queueShutdown();
+            Utils::throwIfError<true>(getLogger(), err, CHANNEL_LOG_TAG);
+            return false;
+            // Queue up remaining data
+        }
+
+        // Success
+        // offset 0 len recv_bytes
+
+        incomingQueue.enqueueMove(byteBuf.subspan(0, recv_bytes));
+
+        if (!listenCallback.empty()) {
+            listenCallback.invokeError(*this, incomingQueue, [&logToken, this](auto const &e) constexpr {
+                getLogger().writeLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG,
+                                                         fmt::format("Exception caught in listener: {}",
+                                                                     e.what()));
+            });
+        }
+
+        // success got data
+        return true;
     } catch (std::exception const &e) {
         getLogger().fmtLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG,
                                                "Closing socket because it has crashed fatally while reading: {}",
@@ -161,31 +170,40 @@ void Channel::readThreadLoop() {
         this->queueShutdown();
     }
 
-    getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Read loop ending");
+    return false;
 }
 
-void Channel::writeThreadLoop() {
-    auto logToken = getLogger().createProducerToken();
+bool Channel::handleWriteQueue(moodycamel::ProducerToken const &logToken) {
+    if (!active) {
+        return false;
+    }
+
+    // TODO: Should be done?
+    if (writeQueue.size_approx() == 0) return false;
+
+    // don't lock since try_lock already locked
+    std::unique_lock lock(writeLock, std::try_to_lock);
+
+    if (!lock) {
+        return false;
+    }
 
     try {
-
         auto constexpr messageReserve = 10;
         Message messages[messageReserve];
 
-        while (socket.isActive() && active) {
 
-            auto dequeCount = writeQueue.wait_dequeue_bulk_timed(writeConsumeToken, messages, messageReserve,
-                                                                 std::chrono::milliseconds(500));
-            if (dequeCount == 0) {
-                std::this_thread::yield();
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
-                continue;
-            }
-
-            for (size_t i = 0; i < dequeCount; i++) {
-                sendMessage(messages[i]);
-            }
+        auto dequeCount = writeQueue.wait_dequeue_bulk_timed(writeConsumeToken, messages, messageReserve,
+                                                             std::chrono::microseconds (100));
+        if (dequeCount == 0) {
+            return false;
         }
+
+        for (size_t i = 0; i < dequeCount; i++) {
+            sendMessage(messages[i]);
+        }
+
+        return true;
     } catch (std::exception const &e) {
         getLogger().fmtLog<LoggerLevel::ERROR>(logToken, CHANNEL_LOG_TAG,
                                                "Closing socket because it has crashed fatally while writing: {}",
@@ -196,6 +214,8 @@ void Channel::writeThreadLoop() {
                                                  "Closing socket because it has crashed fatally while writing for an unknown reason");
         this->queueShutdown();
     }
+
+    return false;
 }
 
 void Channel::sendMessage(const Message &message) {
@@ -221,7 +241,7 @@ void Channel::sendBytes(std::span<const byte> bytes) {
         // Queue up remaining data
         if (sent_bytes < 0) {
             if (err == EWOULDBLOCK) {
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
                 continue;
             }
             this->queueShutdown();
@@ -264,7 +284,14 @@ void Channel::awaitShutdown() {
         writeThread.join();
     }
 
-    getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Ending read write thread");
+    // Wait for these to unlock
+    std::lock(readLock, writeLock);
+    readLock.unlock();
+    writeLock.unlock();
+//    std::lock_guard readLockGuard(readLock);
+//    std::lock_guard writeLockGuard(writeLock);
+
+    getLogger().writeLog<LoggerLevel::DEBUG_LEVEL>(CHANNEL_LOG_TAG, "Ending channel");
 }
 
 

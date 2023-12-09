@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeSharedSettings">
+    <configurations>
+      <configuration PROFILE_NAME="RelWithDebInfo" ENABLED="true" GENERATION_DIR="build" CONFIG_NAME="RelWithDebInfo" GENERATION_OPTIONS="-G Ninja" />
+      <configuration PROFILE_NAME="Test RelWithDebInfo (1)" ENABLED="true" GENERATION_DIR="build-test" CONFIG_NAME="RelWithDebInfo" GENERATION_OPTIONS="-G Ninja -DBUILD_TEST=&quot;&quot;" />
+      <configuration PROFILE_NAME="TestNotQuest RelWithDebInfo (2)" ENABLED="true" GENERATION_DIR="build-test-notquest" CONFIG_NAME="RelWithDebInfo" GENERATION_OPTIONS="-G Ninja -DBUILD_TEST=&quot;&quot; -DNOT_QUEST=&quot;&quot;" />
+      <configuration PROFILE_NAME="TestNotQuest Profile" ENABLED="true" GENERATION_DIR="build-test-notquest-profile" CONFIG_NAME="RelWithDebInfo" GENERATION_OPTIONS="-G Ninja -DBUILD_TEST=&quot;&quot; -DNOT_QUEST=&quot;&quot; -DPROFILE=&quot;&quot;" />
+    </configurations>
+  </component>
+</project>

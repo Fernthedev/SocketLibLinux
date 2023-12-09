@@ -23,7 +23,7 @@ namespace SocketLib {
 
         /// Creates a socket handler with the specified amount of threads in the thread pool
         /// \param maxThreads
-        explicit SocketHandler(int maxThreads = 2);
+        explicit SocketHandler();
         ~SocketHandler();
 
         // No copying socket, we only have 1 instance ever alive.
@@ -51,11 +51,6 @@ namespace SocketLib {
         inline void destroySocket(Socket const& s) {
             destroySocket(s.id);
         }
-
-        /// Queues up work in the thread loop. Avoid calling this with code that locks
-        /// \param work The work to be done in the thread loop
-        void queueWork(const WorkT& work);
-        void queueWork(WorkT&& work);
 
 
         /// A common instance that can be used with multiple sockets.
@@ -89,9 +84,7 @@ namespace SocketLib {
         std::unordered_map<uint32_t, std::unique_ptr<Socket>> sockets;
         std::shared_mutex socketMutex;
 
-        std::vector<std::thread> threadPool;
         std::thread loggerThread;
-        moodycamel::BlockingConcurrentQueue<WorkT> workQueue;
     };
 }
 

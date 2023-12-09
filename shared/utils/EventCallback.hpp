@@ -121,13 +121,13 @@ namespace SocketLib {
 }
 namespace std {
     template<typename R, typename T, typename... TArgs>
-    struct hash<SocketLib::AbstractFunction<R(T *, TArgs...)>> {
-        std::size_t operator()(const SocketLib::AbstractFunction<R(T *, TArgs...)> &obj) const noexcept {
-            auto seed = std::hash<void *>{}(obj.instance());
-            return seed ^ std::hash<void *>{}(reinterpret_cast<void *>(obj.ptr())) + 0x9e3779b9 + (seed << 6) +
-                          (seed >> 2);
-        }
-    };
+    struct hash<SocketLib::AbstractFunction < R(T * , TArgs...)>> {
+    std::size_t operator()(const SocketLib::AbstractFunction<R(T *, TArgs...)> &obj) const noexcept {
+        auto seed = std::hash<void *>{}(obj.instance());
+        return seed ^ std::hash<void *>{}(reinterpret_cast<void *>(obj.ptr())) + 0x9e3779b9 + (seed << 6) +
+                      (seed >> 2);
+    }
+};
 }
 
 namespace SocketLib {
@@ -192,16 +192,16 @@ namespace SocketLib {
 
 namespace std {
     template<typename R, typename T, typename... TArgs>
-    struct hash<SocketLib::ThinVirtualLayer<R(T *, TArgs...)>> {
-        std::size_t operator()(const SocketLib::ThinVirtualLayer<R(T *, TArgs...)> &obj) const noexcept {
-            return std::hash<SocketLib::AbstractFunction<R(T *, TArgs...)>>{}(*obj.func);
-        }
-    };
+    struct hash<SocketLib::ThinVirtualLayer < R(T * , TArgs...)>> {
+    std::size_t operator()(const SocketLib::ThinVirtualLayer<R(T *, TArgs...)> &obj) const noexcept {
+        return std::hash<SocketLib::AbstractFunction<R(T * , TArgs...)>>{}(*obj.func);
+    }
+};
 }
 
 namespace SocketLib::Utils {
     template<template<typename> typename Container, typename ...TArgs> requires(
-            is_valid_container<Container, ThinVirtualLayer<void(void *, TArgs...)>>)
+    is_valid_container<Container, ThinVirtualLayer<void(void *, TArgs...)>>)
     class BasicEventCallback {
     private:
         using functionType = ThinVirtualLayer<void(void *, TArgs...)>;
@@ -279,7 +279,7 @@ namespace SocketLib::Utils {
     // Thread safe implementation
     // TODO: Reuse code somehow
     template<template<typename> typename Container, typename ...TArgs> requires(
-            is_valid_container<Container, ThinVirtualLayer<void(void *, TArgs...)>>)
+    is_valid_container<Container, ThinVirtualLayer<void(void *, TArgs...)>>)
     class ThreadSafeEventCallback {
     private:
         using functionType = ThinVirtualLayer<void(void *, TArgs...)>;
@@ -297,15 +297,17 @@ namespace SocketLib::Utils {
         }
 
         template<typename F>
-        void invokeError(TArgs... args, F&& exceptionHandle) {
-            if (callbacks.empty()) return;
+        void invokeError(TArgs... args, F &&exceptionHandle) {
+            if (callbacks.empty()) {
+                return;
+            }
             std::shared_lock<std::shared_mutex> lock(mutex);
 
             for (auto &callback: callbacks) {
                 try {
                     callback(args...);
-                } catch (std::exception const& e) {
-                    exceptionHandle(e);
+                } catch (std::exception const &e) {
+                    std::forward<F>(exceptionHandle)(e);
                 }
             }
         }
