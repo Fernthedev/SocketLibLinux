@@ -60,8 +60,8 @@ jobs:
       - name: Build
         run: |
           cd ${GITHUB_WORKSPACE}
-          qpm-rust s build
           qpm-rust restore
+          qpm-rust s build
           qpm-rust qmod build
 
       - name: Get Library Name
