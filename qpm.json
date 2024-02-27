@@ -21,7 +21,7 @@
   "dependencies": [
     {
       "id": "paper",
-      "versionRange": "<1.3.0",
+      "versionRange": "^3.0.0",
       "additionalData": {}
     },
     {
