@@ -22,8 +22,8 @@ void Logger::queueLogInternal(const moodycamel::ProducerToken &producer,
                               std::string_view log) {
 #ifdef SOCKETLIB_PAPER_LOG
   setup();
-  Paper::Logger::vfmtLog<Paper::LogLevel::INF>(
-      "[{}] {}", Paper::sl::current("", "", 0, 0), "SocketLib",
+  Paper::Logger::vfmtLog(
+      "[{}] {}", Paper::LogLevel::INF, Paper::sl::current("", "", 0, 0), "SocketLib",
       fmt::make_format_args(tag, log));
 #else
   while (!this->logQueue.enqueue(producer, {level, tag, log})) {
@@ -37,8 +37,8 @@ void Logger::queueLogInternal(LoggerLevel level, std::string_view tag,
 
 #ifdef SOCKETLIB_PAPER_LOG
   setup();
-  Paper::Logger::vfmtLog<Paper::LogLevel::INF>(
-      "[{}] {}", Paper::sl::current("", "", 0, 0), "SocketLib",
+  Paper::Logger::vfmtLog(
+      "[{}] {}", Paper::LogLevel::INF, Paper::sl::current("", "", 0, 0), "SocketLib",
       fmt::make_format_args(tag, log));
 #else
   while (!logQueue.enqueue({level, tag, log})) {
