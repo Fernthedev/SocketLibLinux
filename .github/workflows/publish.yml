@@ -61,7 +61,7 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}
           qpm-rust s build
-          qpm-rust qmod build
+          qpm-rust qmod zip
 
       - name: Get Library Name
         id: libname
@@ -74,11 +74,6 @@ jobs:
       - name: Rename debug
         run: |
           mv ./build/debug/${{ steps.libname.outputs.NAME }} ./build/debug/debug_${{ steps.libname.outputs.NAME }}
-
-
-      - name: Create Qmod
-        run: |
-          pwsh -Command ./createqmod.ps1 ${{env.qmodName}}
 
       - name: Upload to Release
         id: upload_file_release
