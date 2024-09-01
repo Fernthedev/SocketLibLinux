@@ -23,9 +23,11 @@
         ]
       },
       "ndk": "^27.0.12077973",
-      "qmodIncludeDirs": [],
+      "qmodIncludeDirs": [
+        "./build"
+      ],
       "qmodIncludeFiles": [],
-      "qmodOutput": null
+      "qmodOutput": "./socket_lib.qmod"
     },
     "dependencies": [
       {
