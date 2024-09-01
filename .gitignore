@@ -7,6 +7,10 @@ build/
 build-test/
 package-lock.json
 yarn.lock
+.idea/
+build-*/
+*.log
+*.qmod
 
 qpm_defines.cmake
 extern.cmake
@@ -62,6 +66,7 @@ ndkpath.txt
 *.txt
 extern/
 Android.mk.backup
+# qpm.shared.json
 ### C++ template
 # Prerequisites
 *.d

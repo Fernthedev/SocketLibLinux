@@ -1,4 +1,5 @@
 {
+  "version": "0.1.0",
   "sharedDir": "shared",
   "dependenciesDir": "extern",
   "info": {
@@ -14,14 +15,23 @@
   "workspace": {
     "scripts": {
       "build": [
-        "pwsh ./build.ps1"
+        "pwsh ./scripts/build.ps1"
+      ],
+      "setup": [
+        "pwsh ./scripts/setup.ps1"
       ]
-    }
+    },
+    "ndk": "^27.0.12077973",
+    "qmodIncludeDirs": [
+      "./build"
+    ],
+    "qmodIncludeFiles": [],
+    "qmodOutput": "./socketlib.qmod"
   },
   "dependencies": [
     {
       "id": "paper",
-      "versionRange": "^3.0.0",
+      "versionRange": "^3.6.4",
       "additionalData": {}
     },
     {

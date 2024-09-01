@@ -1,0 +1,1 @@
+cd builddir && meson compile
