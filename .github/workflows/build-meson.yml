@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         name: Checkout
         with:
           submodules: true
@@ -52,7 +52,7 @@ jobs:
 
       - name: QPM Dependencies Cache
         id: cache-qpm-deps
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-qpm-deps
         with:
@@ -75,13 +75,13 @@ jobs:
           action: build
 
       - name: Upload library file
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: libsocket_lib.so
           path: ./build/libsocket_lib.so
           if-no-files-found: error
       - name: Upload executable tests
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: SocketLibMain
           path: ./build/SocketLibMain
