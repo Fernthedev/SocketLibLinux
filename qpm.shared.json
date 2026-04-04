@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/QuestPackageManager/QPM.Package/refs/heads/main/qpm.shared.schema.json",
   "config": {
     "version": "0.1.0",
     "sharedDir": "shared",
@@ -22,7 +23,7 @@
           "pwsh ./scripts/setup.ps1"
         ]
       },
-      "ndk": "^27.0.12077973",
+      "ndk": "^27.3.13750724",
       "qmodIncludeDirs": [
         "./build"
       ],
@@ -31,13 +32,13 @@
     },
     "dependencies": [
       {
-        "id": "paper",
-        "versionRange": "^3.6.4",
+        "id": "fmt",
+        "versionRange": "^11.0.0",
         "additionalData": {}
       },
       {
-        "id": "fmt",
-        "versionRange": "^10.0.0",
+        "id": "paper2_scotland2",
+        "versionRange": "^4.7.0",
         "additionalData": {}
       }
     ]
@@ -45,31 +46,11 @@
   "restoredDependencies": [
     {
       "dependency": {
-        "id": "paper",
-        "versionRange": "=3.6.4",
-        "additionalData": {
-          "soLink": "https://github.com/Fernthedev/paperlog/releases/download/v3.6.4/libpaperlog.so",
-          "debugSoLink": "https://github.com/Fernthedev/paperlog/releases/download/v3.6.4/debug_libpaperlog.so",
-          "overrideSoName": "libpaperlog.so",
-          "modLink": "https://github.com/Fernthedev/paperlog/releases/download/v3.6.4/paperlog.qmod",
-          "branchName": "version/v3_6_4",
-          "compileOptions": {
-            "systemIncludes": [
-              "shared/utfcpp/source"
-            ]
-          },
-          "cmake": false
-        }
-      },
-      "version": "3.6.4"
-    },
-    {
-      "dependency": {
         "id": "fmt",
-        "versionRange": "=10.0.0",
+        "versionRange": "=11.0.2",
         "additionalData": {
           "headersOnly": true,
-          "branchName": "version/v10_0_0",
+          "branchName": "version/v11_0_2",
           "compileOptions": {
             "systemIncludes": [
               "fmt/include/"
@@ -80,7 +61,26 @@
           }
         }
       },
-      "version": "10.0.0"
+      "version": "11.0.2"
+    },
+    {
+      "dependency": {
+        "id": "paper2_scotland2",
+        "versionRange": "=4.7.0",
+        "additionalData": {
+          "soLink": "https://github.com/Fernthedev/paperlog/releases/download/v4.7.0/libpaper2_scotland2.so",
+          "overrideSoName": "libpaper2_scotland2.so",
+          "modLink": "https://github.com/Fernthedev/paperlog/releases/download/v4.7.0/paper2_scotland2.qmod",
+          "branchName": "version/v4_7_0",
+          "compileOptions": {
+            "systemIncludes": [
+              "shared/utfcpp/source"
+            ]
+          },
+          "cmake": false
+        }
+      },
+      "version": "4.7.0"
     }
   ]
 }
