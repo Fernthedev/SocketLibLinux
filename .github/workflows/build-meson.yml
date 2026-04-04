@@ -41,7 +41,7 @@ jobs:
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: cargo-build.yml
-          name: linux-qpm
+          name: qpm-linux-x64
           path: QPM
           repo: QuestPackageManager/QPM.CLI
 
